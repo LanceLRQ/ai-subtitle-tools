@@ -56,10 +56,11 @@ export interface PipelineState {
 
 /** FunASR 响应中的分段 */
 export interface FunASRSegment {
+  id: number;
   text: string;
-  start_time: number;
-  end_time: number;
-  speaker_id?: string;
+  start: number;
+  end: number;
+  speaker?: string;
 }
 
 /** FunASR API 响应（verbose_json 格式） */

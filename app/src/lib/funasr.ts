@@ -56,11 +56,11 @@ export async function recognizeSpeech(
 
   const entries = data.segments.map((segment, index) => ({
     index: index + 1,
-    startTime: Math.round(segment.start_time * 1000),
-    endTime: Math.round(segment.end_time * 1000),
+    startTime: Math.round(segment.start * 1000),
+    endTime: Math.round(segment.end * 1000),
     originalText: segment.text.trim(),
     translatedText: '',
-    speakerId: segment.speaker_id,
+    speakerId: segment.speaker,
   }));
 
   return { entries, rawResponse: data };
