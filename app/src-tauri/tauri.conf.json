@@ -18,7 +18,7 @@
   "app": {
     "windows": [
       {
-        "title": "AI Subtitle Tools",
+        "title": "AI视频字幕生成工具",
         "width": 1024,
         "height": 768,
         "resizable": true,

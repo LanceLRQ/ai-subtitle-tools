@@ -81,6 +81,21 @@ export interface FunASRResponse {
   duration: number;
 }
 
+/** 日志级别 */
+export type LogLevel = 'info' | 'warn' | 'error';
+
+/** 日志条目 */
+export interface LogEntry {
+  id: string;
+  timestamp: number;
+  level: LogLevel;
+  message: string;
+  /** LLM 流式响应内容，实时更新 */
+  streamContent?: string;
+  /** 是否正在流式接收中 */
+  streaming?: boolean;
+}
+
 /** FFmpeg 检测结果 */
 export interface FFmpegDetectResult {
   path: string;

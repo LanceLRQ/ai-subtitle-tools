@@ -19,7 +19,7 @@ export function getDefaultConfig(): AppConfig {
     },
     translation: {
       enabled: false,
-      batchSize: 100,
+      batchSize: 50,
       bilingual: true,
       targetLanguage: '中文',
     },

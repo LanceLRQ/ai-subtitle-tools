@@ -39,19 +39,19 @@ export default function FilePicker({ videoPath, onSelect, disabled }: FilePicker
       <button
         onClick={handleClick}
         disabled={disabled}
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
       >
         选择视频文件
       </button>
       {videoPath ? (
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-gray-200 truncate" title={videoPath}>
+          <p className="text-sm text-gray-800 dark:text-gray-200 truncate" title={videoPath}>
             {fileName}
           </p>
-          <p className="text-xs text-gray-500 truncate">{videoPath}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{videoPath}</p>
         </div>
       ) : (
-        <p className="text-sm text-gray-500">支持 {VIDEO_EXTENSIONS.join(', ')} 格式</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">支持 {VIDEO_EXTENSIONS.join(', ')} 格式</p>
       )}
     </div>
   );

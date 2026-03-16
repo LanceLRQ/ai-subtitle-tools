@@ -28,17 +28,17 @@ export default function ProgressBar({ stage, progress, message, stageLabel }: Pr
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-sm">
-        <span className="text-gray-300">{stageLabel}</span>
-        {progress > 0 && <span className="text-gray-400">{progress}%</span>}
+        <span className="text-gray-700 dark:text-gray-300">{stageLabel}</span>
+        {progress > 0 && <span className="text-gray-500 dark:text-gray-400">{progress}%</span>}
       </div>
-      <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-300 ${color}`}
           style={{ width: `${Math.max(progress, stage === 'done' || stage === 'error' ? 100 : 5)}%` }}
         />
       </div>
       {message && (
-        <p className={`text-xs truncate ${stage === 'error' ? 'text-red-400' : 'text-gray-500'}`}>
+        <p className={`text-xs truncate ${stage === 'error' ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
           {message}
         </p>
       )}
