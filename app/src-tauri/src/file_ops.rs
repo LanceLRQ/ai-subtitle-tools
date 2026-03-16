@@ -20,11 +20,9 @@ fn validate_path(path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// 根据视频路径生成临时音频文件路径（同目录下 .wav）
+/// 在系统临时目录下生成音频文件路径
 #[tauri::command]
 pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
-    validate_path(&video_path)?;
-
     let path = Path::new(&video_path);
 
     let stem = path
@@ -32,13 +30,33 @@ pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
         .ok_or("Invalid video file path")?
         .to_string_lossy();
 
-    let parent = path
-        .parent()
-        .ok_or("Cannot get parent directory")?
-        .to_string_lossy();
+    // 使用系统临时目录，加 pid 避免多实例冲突
+    let temp_dir = std::env::temp_dir();
+    let app_temp = temp_dir.join("ai-subtitle-tools");
+    fs::create_dir_all(&app_temp)
+        .map_err(|e| format!("Failed to create temp dir: {}", e))?;
 
-    let audio_path = format!("{}/{}_temp_audio.wav", parent, stem);
-    Ok(audio_path)
+    let audio_path = app_temp.join(format!(
+        "{}_{}.wav",
+        stem,
+        std::process::id()
+    ));
+
+    Ok(audio_path.to_string_lossy().to_string())
+}
+
+/// 清理应用临时目录下的所有文件
+#[tauri::command]
+pub fn cleanup_temp_files() -> Result<(), String> {
+    let temp_dir = std::env::temp_dir().join("ai-subtitle-tools");
+    if temp_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&temp_dir) {
+            for entry in entries.flatten() {
+                let _ = fs::remove_file(entry.path());
+            }
+        }
+    }
+    Ok(())
 }
 
 /// 保存文本文件（SRT 导出用）
@@ -91,18 +109,16 @@ pub fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
 pub fn remove_file(path: String) -> Result<(), String> {
     validate_path(&path)?;
 
-    // 只允许删除临时音频文件
-    let file_name = Path::new(&path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    // 只允许删除应用临时目录下的文件
+    let app_temp = std::env::temp_dir().join("ai-subtitle-tools");
+    let file_path = Path::new(&path);
 
-    if !file_name.contains("_temp_audio") {
-        return Err(format!("Only temp audio files can be removed: {}", path));
+    if !file_path.starts_with(&app_temp) {
+        return Err(format!("Only temp files can be removed: {}", path));
     }
 
-    if Path::new(&path).exists() {
-        fs::remove_file(&path)
+    if file_path.exists() {
+        fs::remove_file(file_path)
             .map_err(|e| format!("Failed to remove file '{}': {}", path, e))
     } else {
         Ok(())

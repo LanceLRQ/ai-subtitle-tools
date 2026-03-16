@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { AppConfig, PipelineState, PipelineStage, FFmpegDetectResult } from '@/lib/types';
 import { loadConfig, saveConfig, getDefaultConfig } from '@/lib/config';
 import { detectFFmpeg } from '@/lib/ffmpegDetector';
-import { extractAudio, getTempAudioPath, removeTempFile } from '@/lib/ffmpeg';
+import { extractAudio, getTempAudioPath, cleanupTempFiles } from '@/lib/ffmpeg';
 import { recognizeSpeech } from '@/lib/funasr';
 import { translateAll } from '@/lib/translator';
 import { generateSRT } from '@/lib/subtitle';
@@ -130,15 +130,14 @@ export function usePipeline() {
       }
     } finally {
       // 清理临时文件
-      if (tempAudioPath) {
-        removeTempFile(tempAudioPath).catch(console.error);
-      }
+      cleanupTempFiles().catch(console.error);
     }
   }, [videoPath, config, ffmpegInfo, updatePipeline]);
 
   // 取消处理
   const cancelProcessing = useCallback(() => {
     cancelledRef.current = true;
+    cleanupTempFiles().catch(console.error);
     updatePipeline({ stage: 'idle', progress: 0, message: '已取消' });
   }, [updatePipeline]);
 

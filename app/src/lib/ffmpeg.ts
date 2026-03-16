@@ -79,3 +79,14 @@ export async function removeTempFile(path: string): Promise<void> {
     // 删除失败不阻塞流程
   }
 }
+
+/**
+ * 清理应用临时目录下的所有文件
+ */
+export async function cleanupTempFiles(): Promise<void> {
+  try {
+    await invoke('cleanup_temp_files');
+  } catch {
+    // 清理失败不阻塞流程
+  }
+}

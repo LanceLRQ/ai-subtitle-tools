@@ -18,6 +18,7 @@ pub fn run() {
             file_ops::save_file,
             file_ops::read_file_bytes,
             file_ops::remove_file,
+            file_ops::cleanup_temp_files,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
