@@ -29,9 +29,12 @@ fn default_config() -> &'static str {
   },
   "translation": {
     "enabled": false,
-    "batchSize": 10,
+    "batchSize": 100,
     "bilingual": true,
     "targetLanguage": "中文"
+  },
+  "subtitle": {
+    "maxCharsPerLine": 30
   },
   "debug": {
     "enabled": false

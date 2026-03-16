@@ -19,6 +19,9 @@ export interface AppConfig {
     bilingual: boolean;
     targetLanguage: string;
   };
+  subtitle: {
+    maxCharsPerLine: number;
+  };
   debug: {
     enabled: boolean;
   };
@@ -54,6 +57,13 @@ export interface PipelineState {
   error?: string;
 }
 
+/** FunASR 逐字时间戳 */
+export interface FunASRWordToken {
+  text: string;
+  start_time: number;
+  end_time: number;
+}
+
 /** FunASR 响应中的分段 */
 export interface FunASRSegment {
   id: number;
@@ -61,6 +71,7 @@ export interface FunASRSegment {
   start: number;
   end: number;
   speaker?: string;
+  word_tokens?: FunASRWordToken[];
 }
 
 /** FunASR API 响应（verbose_json 格式） */

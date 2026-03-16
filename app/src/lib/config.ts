@@ -19,9 +19,12 @@ export function getDefaultConfig(): AppConfig {
     },
     translation: {
       enabled: false,
-      batchSize: 10,
+      batchSize: 100,
       bilingual: true,
       targetLanguage: '中文',
+    },
+    subtitle: {
+      maxCharsPerLine: 30,
     },
     debug: {
       enabled: false,
@@ -42,6 +45,7 @@ export async function loadConfig(): Promise<AppConfig> {
       funasr: { ...defaults.funasr, ...saved.funasr },
       llm: { ...defaults.llm, ...saved.llm },
       translation: { ...defaults.translation, ...saved.translation },
+      subtitle: { ...defaults.subtitle, ...saved.subtitle },
       debug: { ...defaults.debug, ...saved.debug },
     };
   } catch {

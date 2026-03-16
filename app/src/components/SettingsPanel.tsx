@@ -332,11 +332,30 @@ export default function SettingsPanel({
                   value={config.translation.batchSize}
                   onChange={(e) => update('translation', 'batchSize', parseInt(e.target.value) || 10)}
                   min={1}
-                  max={50}
+                  max={200}
                   disabled={!config.translation.enabled}
                   className="w-20 px-3 py-1.5 bg-gray-900 border border-gray-600 rounded text-sm text-gray-200 disabled:opacity-50"
                 />
               </div>
+            </div>
+          </fieldset>
+
+          {/* 字幕设置 */}
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-gray-300">字幕设置</legend>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-400">每行最大字符数</label>
+              <input
+                type="number"
+                value={config.subtitle.maxCharsPerLine}
+                onChange={(e) => update('subtitle', 'maxCharsPerLine', parseInt(e.target.value) || 30)}
+                min={10}
+                max={100}
+                className="w-20 px-3 py-1.5 bg-gray-900 border border-gray-600 rounded text-sm text-gray-200"
+              />
+              <span className="text-xs text-gray-500">
+                ASR 长文本将按标点拆分并合并为不超过此长度的字幕行
+              </span>
             </div>
           </fieldset>
 

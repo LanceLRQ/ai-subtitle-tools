@@ -6,6 +6,7 @@ import { loadConfig, saveConfig, getDefaultConfig } from '@/lib/config';
 import { detectFFmpeg } from '@/lib/ffmpegDetector';
 import { extractAudio, getTempAudioPath, cleanupTempFiles } from '@/lib/ffmpeg';
 import { recognizeSpeech } from '@/lib/funasr';
+import { splitSegments } from '@/lib/subtitleSplitter';
 import { translateAll } from '@/lib/translator';
 import { generateSRT } from '@/lib/subtitle';
 import { writeAsrDebugLog, appendLlmDebugLog } from '@/lib/debugLog';
@@ -99,7 +100,7 @@ export function usePipeline() {
       // 阶段 3: 语音识别
       updatePipeline({ stage: 'recognizing', progress: 0, message: '正在进行语音识别...' });
       const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
-      const entries = asrResult.entries;
+      const entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
       updatePipeline({ entries, progress: 100 });
 
       // 调试模式：保存 ASR 原始 JSON
