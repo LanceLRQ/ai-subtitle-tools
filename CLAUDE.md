@@ -26,6 +26,8 @@ Next.js GUI → Tauri → Local capabilities (FFmpeg, file system, config)
 ## Build & Development Commands
 
 ```bash
+cd app
+
 # Frontend dev server
 npm run dev
 
@@ -39,20 +41,30 @@ npm run tauri dev
 npm run tauri build
 ```
 
-## Project Structure (Planned)
+## Project Structure
 
 ```
-src/
-├── app/page.tsx              # Main page
-├── components/               # UI components (FilePicker, ProgressBar, SubtitlePreview, SettingsPanel)
-├── lib/
-│   ├── ffmpeg.ts             # FFmpeg execution wrapper
-│   ├── ffmpegDetector.ts     # FFmpeg auto-detection (3-tier priority)
-│   ├── funasr.ts             # FunASR API client
-│   ├── translator.ts         # LLM translation (OpenAI-compatible API)
-│   ├── subtitle.ts           # SRT parsing and generation
-│   └── config.ts             # JSON config management
-src-tauri/                    # Tauri backend (Rust)
+app/                          # Desktop application (Next.js + Tauri)
+├── src/
+│   ├── app/page.tsx          # Main page
+│   ├── components/           # UI components (FilePicker, ProgressBar, SubtitlePreview, SettingsPanel)
+│   ├── hooks/                # React Hooks (usePipeline)
+│   └── lib/
+│       ├── types.ts          # Shared type definitions
+│       ├── ffmpeg.ts         # FFmpeg execution wrapper
+│       ├── ffmpegDetector.ts # FFmpeg auto-detection (3-tier priority)
+│       ├── funasr.ts         # FunASR API client
+│       ├── translator.ts     # LLM translation (OpenAI-compatible API)
+│       ├── subtitle.ts       # SRT parsing and generation
+│       └── config.ts         # JSON config management
+├── src-tauri/                # Tauri backend (Rust)
+│   └── src/
+│       ├── lib.rs            # Entry point + command registration
+│       ├── config.rs         # Config read/write
+│       ├── ffmpeg.rs         # FFmpeg execution + progress events
+│       └── file_ops.rs       # File operations
+├── package.json
+└── next.config.ts
 ```
 
 ## Key Design Decisions
