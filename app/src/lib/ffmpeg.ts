@@ -52,18 +52,12 @@ export async function extractAudio(
       unlistenDone = fn;
     });
 
-    // 调用 Rust 命令启动 FFmpeg
-    const args = [
-      '-i', videoPath,
-      '-vn',
-      '-acodec', 'pcm_s16le',
-      '-ar', '16000',
-      '-ac', '1',
-      '-y',
+    // 调用 Rust 命令启动 FFmpeg（结构化参数，Rust 侧构建命令）
+    invoke('run_ffmpeg_extract_audio', {
+      ffmpegPath,
+      inputPath: videoPath,
       outputPath,
-    ];
-
-    invoke('run_ffmpeg', { ffmpegPath, args }).catch((err) => {
+    }).catch((err) => {
       unlistenDone?.();
       unlistenProgress?.();
       reject(new Error(String(err)));

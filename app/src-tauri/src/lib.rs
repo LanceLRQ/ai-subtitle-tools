@@ -5,7 +5,6 @@ mod file_ops;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -14,7 +13,7 @@ pub fn run() {
             config::write_config,
             ffmpeg::check_ffmpeg_version,
             ffmpeg::get_app_dir,
-            ffmpeg::run_ffmpeg,
+            ffmpeg::run_ffmpeg_extract_audio,
             file_ops::get_temp_audio_path,
             file_ops::save_file,
             file_ops::read_file_bytes,
