@@ -339,6 +339,21 @@ export default function SettingsPanel({
               </div>
             </div>
           </fieldset>
+
+          {/* 调试 */}
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-gray-300">调试</legend>
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={config.debug.enabled}
+                onChange={(v) => update('debug', 'enabled', v)}
+                label="调试模式"
+              />
+              <span className="text-xs text-gray-500">
+                开启后将 ASR 原始 JSON 和 LLM 请求日志保存到视频所在目录
+              </span>
+            </div>
+          </fieldset>
         </div>
       )}
     </div>

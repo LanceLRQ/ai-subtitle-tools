@@ -32,6 +32,9 @@ fn default_config() -> &'static str {
     "batchSize": 10,
     "bilingual": true,
     "targetLanguage": "中文"
+  },
+  "debug": {
+    "enabled": false
   }
 }"#
 }

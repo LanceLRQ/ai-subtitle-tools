@@ -25,6 +25,13 @@ function buildHeaders(apiKey: string): Record<string, string> {
   return headers;
 }
 
+interface TranslateBatchResult {
+  translations: string[];
+  prompt: string;
+  rawResponse: string;
+  hadThinkingTags: boolean;
+}
+
 /**
  * 对一批字幕调用 LLM 翻译
  */
@@ -32,7 +39,7 @@ async function translateBatch(
   texts: string[],
   config: AppConfig['llm'],
   targetLanguage: string
-): Promise<string[]> {
+): Promise<TranslateBatchResult> {
   const numberedTexts = texts.map((t, i) => `${i + 1}. ${t}`).join('\n');
   const userPrompt =
     `请将下列字幕内容翻译成${targetLanguage}，每行一条，保持原序，仅返回翻译结果（每行格式为"序号. 译文"）：\n${numberedTexts}`;
@@ -59,7 +66,9 @@ async function translateBatch(
   }
 
   const data = (await response.json()) as ChatCompletionResponse;
-  const content = stripThinkingTags(data.choices?.[0]?.message?.content || '');
+  const rawResponse = data.choices?.[0]?.message?.content || '';
+  const hadThinkingTags = /<think>[\s\S]*?<\/think>/i.test(rawResponse);
+  const content = stripThinkingTags(rawResponse);
   if (!content) {
     throw new Error('LLM returned empty response');
   }
@@ -87,7 +96,12 @@ async function translateBatch(
     }
   }
 
-  return results.slice(0, texts.length);
+  return {
+    translations: results.slice(0, texts.length),
+    prompt: userPrompt,
+    rawResponse,
+    hadThinkingTags,
+  };
 }
 
 /**
@@ -98,7 +112,7 @@ async function translateBatchWithRetry(
   config: AppConfig['llm'],
   targetLanguage: string,
   maxRetries: number = 3
-): Promise<string[]> {
+): Promise<TranslateBatchResult> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -122,34 +136,53 @@ async function translateBatchWithRetry(
  *
  * 按 batchSize 分批翻译，通过 onProgress 回调报告进度
  */
+export interface TranslateBatchDebugInfo {
+  batchIndex: number;
+  texts: string[];
+  prompt: string;
+  rawResponse: string;
+  hadThinkingTags: boolean;
+}
+
 export async function translateAll(
   entries: SubtitleEntry[],
   config: AppConfig,
-  onProgress?: (completed: number, total: number) => void
+  onProgress?: (completed: number, total: number) => void,
+  onBatchDebug?: (info: TranslateBatchDebugInfo) => void
 ): Promise<SubtitleEntry[]> {
   const { batchSize, targetLanguage } = config.translation;
   const result = [...entries];
   const total = entries.length;
+  let batchIndex = 0;
 
   for (let i = 0; i < total; i += batchSize) {
     const batch = result.slice(i, i + batchSize);
     const texts = batch.map((e) => e.originalText);
 
-    const translations = await translateBatchWithRetry(
+    const batchResult = await translateBatchWithRetry(
       texts,
       config.llm,
       targetLanguage
     );
 
+    onBatchDebug?.({
+      batchIndex,
+      texts,
+      prompt: batchResult.prompt,
+      rawResponse: batchResult.rawResponse,
+      hadThinkingTags: batchResult.hadThinkingTags,
+    });
+
     // 填充翻译结果
     for (let j = 0; j < batch.length; j++) {
       result[i + j] = {
         ...result[i + j],
-        translatedText: translations[j] || '',
+        translatedText: batchResult.translations[j] || '',
       };
     }
 
     onProgress?.(Math.min(i + batchSize, total), total);
+    batchIndex++;
   }
 
   return result;

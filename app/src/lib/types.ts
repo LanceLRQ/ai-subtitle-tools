@@ -19,6 +19,9 @@ export interface AppConfig {
     bilingual: boolean;
     targetLanguage: string;
   };
+  debug: {
+    enabled: boolean;
+  };
 }
 
 /** 字幕条目 */

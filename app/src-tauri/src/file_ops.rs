@@ -59,6 +59,51 @@ pub fn cleanup_temp_files() -> Result<(), String> {
     Ok(())
 }
 
+/// 保存调试日志文件（覆盖写入）
+#[tauri::command]
+pub fn save_debug_file(path: String, content: String) -> Result<(), String> {
+    validate_path(&path)?;
+
+    let ext = Path::new(&path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if ext != "json" && ext != "log" {
+        return Err(format!("Debug files must be .json or .log, got: .{}", ext));
+    }
+
+    fs::write(&path, content)
+        .map_err(|e| format!("Failed to save debug file '{}': {}", path, e))
+}
+
+/// 追加调试日志文件内容
+#[tauri::command]
+pub fn append_debug_file(path: String, content: String) -> Result<(), String> {
+    validate_path(&path)?;
+
+    let ext = Path::new(&path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if ext != "log" {
+        return Err(format!("Append only allowed for .log files, got: .{}", ext));
+    }
+
+    use std::io::Write;
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| format!("Failed to open debug file '{}': {}", path, e))?;
+
+    file.write_all(content.as_bytes())
+        .map_err(|e| format!("Failed to append to debug file '{}': {}", path, e))
+}
+
 /// 保存文本文件（SRT 导出用）
 #[tauri::command]
 pub fn save_file(path: String, content: String) -> Result<(), String> {

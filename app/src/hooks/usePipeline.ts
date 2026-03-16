@@ -8,6 +8,7 @@ import { extractAudio, getTempAudioPath, cleanupTempFiles } from '@/lib/ffmpeg';
 import { recognizeSpeech } from '@/lib/funasr';
 import { translateAll } from '@/lib/translator';
 import { generateSRT } from '@/lib/subtitle';
+import { writeAsrDebugLog, appendLlmDebugLog } from '@/lib/debugLog';
 import { invoke } from '@tauri-apps/api/core';
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
@@ -97,21 +98,36 @@ export function usePipeline() {
 
       // 阶段 3: 语音识别
       updatePipeline({ stage: 'recognizing', progress: 0, message: '正在进行语音识别...' });
-      const entries = await recognizeSpeech(tempAudioPath, config.funasr);
+      const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
+      const entries = asrResult.entries;
       updatePipeline({ entries, progress: 100 });
+
+      // 调试模式：保存 ASR 原始 JSON
+      if (config.debug.enabled) {
+        writeAsrDebugLog(videoPath, asrResult.rawResponse).catch(console.error);
+      }
       if (cancelledRef.current) return;
 
       // 阶段 4: 翻译（仅在启用翻译时执行）
       let finalEntries = entries;
       if (config.translation.enabled) {
         updatePipeline({ stage: 'translating', progress: 0, message: '正在翻译字幕...' });
+        const debugEnabled = config.debug.enabled;
         finalEntries = await translateAll(entries, config, (completed, total) => {
           const percent = Math.round((completed / total) * 100);
           updatePipeline({
             progress: percent,
             message: `翻译进度: ${completed}/${total}`,
           });
-        });
+        }, debugEnabled ? (info) => {
+          appendLlmDebugLog(
+            videoPath,
+            info.batchIndex,
+            { texts: info.texts, prompt: info.prompt },
+            info.rawResponse,
+            info.hadThinkingTags
+          ).catch(console.error);
+        } : undefined);
         updatePipeline({ entries: finalEntries, progress: 100 });
         if (cancelledRef.current) return;
       }

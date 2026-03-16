@@ -7,10 +7,15 @@ import type { AppConfig, SubtitleEntry, FunASRResponse } from './types';
  *
  * 通过 Rust 读取音频二进制，然后 HTTP multipart 上传到 FunASR 服务
  */
+export interface AsrResult {
+  entries: SubtitleEntry[];
+  rawResponse: unknown;
+}
+
 export async function recognizeSpeech(
   audioFilePath: string,
   config: AppConfig['funasr']
-): Promise<SubtitleEntry[]> {
+): Promise<AsrResult> {
   // 读取音频文件二进制
   const audioBytes = await invoke<number[]>('read_file_bytes', { path: audioFilePath });
   const audioData = new Uint8Array(audioBytes);
@@ -49,7 +54,7 @@ export async function recognizeSpeech(
     throw new Error('FunASR returned no segments');
   }
 
-  return data.segments.map((segment, index) => ({
+  const entries = data.segments.map((segment, index) => ({
     index: index + 1,
     startTime: Math.round(segment.start_time * 1000),
     endTime: Math.round(segment.end_time * 1000),
@@ -57,4 +62,6 @@ export async function recognizeSpeech(
     translatedText: '',
     speakerId: segment.speaker_id,
   }));
+
+  return { entries, rawResponse: data };
 }

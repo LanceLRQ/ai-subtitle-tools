@@ -23,6 +23,9 @@ export function getDefaultConfig(): AppConfig {
       bilingual: true,
       targetLanguage: '中文',
     },
+    debug: {
+      enabled: false,
+    },
   };
 }
 
@@ -39,6 +42,7 @@ export async function loadConfig(): Promise<AppConfig> {
       funasr: { ...defaults.funasr, ...saved.funasr },
       llm: { ...defaults.llm, ...saved.llm },
       translation: { ...defaults.translation, ...saved.translation },
+      debug: { ...defaults.debug, ...saved.debug },
     };
   } catch {
     return getDefaultConfig();

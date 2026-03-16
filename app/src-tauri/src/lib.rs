@@ -16,6 +16,8 @@ pub fn run() {
             ffmpeg::run_ffmpeg_extract_audio,
             file_ops::get_temp_audio_path,
             file_ops::save_file,
+            file_ops::save_debug_file,
+            file_ops::append_debug_file,
             file_ops::read_file_bytes,
             file_ops::remove_file,
             file_ops::cleanup_temp_files,
