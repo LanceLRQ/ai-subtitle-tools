@@ -140,7 +140,7 @@ async function translateBatch(
       { role: 'system', content: 'You are a helpful assistant. Provide direct answers without any internal reasoning or step-by-step thinking process. Do not use tags. 你是专业字幕翻译助手。请直接回答问题，不要输出思考过程，不要使用任何推理标签。' },
       { role: 'user', content: userPrompt },
     ],
-    temperature: 0.1,
+    temperature: 0.3,
   };
 
   // 有流式回调时启用 stream 模式

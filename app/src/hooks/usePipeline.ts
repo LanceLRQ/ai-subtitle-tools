@@ -193,6 +193,74 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
     updatePipeline({ stage: 'idle', progress: 0, message: '已取消' });
   }, [updatePipeline]);
 
+  // 重新翻译（仅翻译阶段）
+  const retranslate = useCallback(async () => {
+    if (pipeline.entries.length === 0) return;
+    if (!config.translation.enabled) {
+      updatePipeline({ stage: 'error', message: '请先启用翻译功能', error: '翻译未启用' });
+      return;
+    }
+
+    cancelledRef.current = false;
+    const log = logRef.current;
+    log?.clearLogs();
+
+    try {
+      updatePipeline({ stage: 'translating', progress: 0, message: '正在重新翻译字幕...', error: undefined });
+      log?.addLog('info', '开始重新翻译字幕...');
+
+      // 清除旧译文
+      const cleanEntries = pipeline.entries.map((e) => ({ ...e, translatedText: '' }));
+      const debugEnabled = config.debug.enabled;
+
+      const finalEntries = await translateAll(
+        cleanEntries,
+        config,
+        (completed, total) => {
+          const percent = Math.round((completed / total) * 100);
+          updatePipeline({ progress: percent, message: `翻译进度: ${completed}/${total}` });
+        },
+        debugEnabled ? (info) => {
+          appendLlmDebugLog(
+            videoPath,
+            info.batchIndex,
+            { texts: info.texts, prompt: info.prompt },
+            info.rawResponse,
+            info.hadThinkingTags
+          ).catch(console.error);
+        } : undefined,
+        (batchIndex, totalBatches) => {
+          const streamId = `stream_batch_${batchIndex}_${Date.now()}`;
+          log?.addStreamEntry(streamId, `翻译批次 ${batchIndex + 1}/${totalBatches}...`);
+          return {
+            onChunk: (chunk: string) => { log?.appendStream(streamId, chunk); },
+            onDone: () => { log?.finalizeStream(streamId); },
+          };
+        }
+      );
+
+      updatePipeline({ entries: finalEntries, progress: 100 });
+      log?.addLog('info', '翻译完成');
+
+      if (cancelledRef.current) return;
+
+      // 自动导出
+      updatePipeline({ stage: 'exporting', progress: 0, message: '正在导出字幕...' });
+      const isBilingual = config.translation.bilingual;
+      const srtContent = generateSRT(finalEntries, isBilingual);
+      const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
+      await invoke('save_file', { path: srtPath, content: srtContent });
+      updatePipeline({ stage: 'done', progress: 100, message: `字幕已导出: ${srtPath}` });
+      log?.addLog('info', `字幕已导出: ${srtPath}`);
+    } catch (err) {
+      if (!cancelledRef.current) {
+        const msg = err instanceof Error ? err.message : String(err);
+        updatePipeline({ stage: 'error', message: `翻译失败: ${msg}`, error: msg });
+        log?.addLog('error', msg);
+      }
+    }
+  }, [pipeline.entries, videoPath, config, updatePipeline]);
+
   // 导出到自定义路径
   const exportSRT = useCallback(async (path: string) => {
     try {
@@ -216,6 +284,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
     isProcessing: !['idle', 'done', 'error'].includes(pipeline.stage),
     startProcessing,
     cancelProcessing,
+    retranslate,
     runDetectFFmpeg,
     exportSRT,
   };

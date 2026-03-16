@@ -25,6 +25,7 @@ export default function Home() {
     isProcessing,
     startProcessing,
     cancelProcessing,
+    retranslate,
     runDetectFFmpeg,
     exportSRT,
   } = usePipeline(log);
@@ -107,12 +108,21 @@ export default function Home() {
           )}
 
           {pipeline.stage === 'done' && pipeline.entries.length > 0 && (
-            <button
-              onClick={handleExport}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-            >
-              另存为...
-            </button>
+            <>
+              <button
+                onClick={retranslate}
+                disabled={!config.translation.enabled}
+                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+              >
+                重新翻译
+              </button>
+              <button
+                onClick={handleExport}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                另存为...
+              </button>
+            </>
           )}
         </div>
 
