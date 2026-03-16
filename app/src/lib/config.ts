@@ -8,19 +8,20 @@ export function getDefaultConfig(): AppConfig {
       path: '',
     },
     funasr: {
-      url: 'http://127.0.0.1:8000',
+      url: 'http://127.0.0.1:17000',
       apiKey: '',
-      model: 'paraformer-large',
+      model: 'qwen3-asr-1.7b',
     },
     llm: {
       baseUrl: 'https://api.openai.com/v1',
       apiKey: '',
       model: 'gpt-4o-mini',
     },
-    subtitle: {
+    translation: {
+      enabled: false,
       batchSize: 10,
       bilingual: true,
-      targetLanguage: '英文',
+      targetLanguage: '中文',
     },
   };
 }
@@ -37,7 +38,7 @@ export async function loadConfig(): Promise<AppConfig> {
       ffmpeg: { ...defaults.ffmpeg, ...saved.ffmpeg },
       funasr: { ...defaults.funasr, ...saved.funasr },
       llm: { ...defaults.llm, ...saved.llm },
-      subtitle: { ...defaults.subtitle, ...saved.subtitle },
+      translation: { ...defaults.translation, ...saved.translation },
     };
   } catch {
     return getDefaultConfig();

@@ -101,34 +101,28 @@ export function usePipeline() {
       updatePipeline({ entries, progress: 100 });
       if (cancelledRef.current) return;
 
-      // 阶段 4: 翻译
-      if (config.subtitle.bilingual && config.llm.apiKey) {
+      // 阶段 4: 翻译（仅在启用翻译时执行）
+      let finalEntries = entries;
+      if (config.translation.enabled) {
         updatePipeline({ stage: 'translating', progress: 0, message: '正在翻译字幕...' });
-        const translated = await translateAll(entries, config, (completed, total) => {
+        finalEntries = await translateAll(entries, config, (completed, total) => {
           const percent = Math.round((completed / total) * 100);
           updatePipeline({
             progress: percent,
             message: `翻译进度: ${completed}/${total}`,
-            entries: translated, // 实时更新已翻译的条目
           });
         });
-        updatePipeline({ entries: translated, progress: 100 });
+        updatePipeline({ entries: finalEntries, progress: 100 });
         if (cancelledRef.current) return;
-
-        // 阶段 5: 导出
-        updatePipeline({ stage: 'exporting', progress: 0, message: '正在导出字幕...' });
-        const srtContent = generateSRT(translated, config.subtitle.bilingual);
-        const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
-        await invoke('save_file', { path: srtPath, content: srtContent });
-        updatePipeline({ stage: 'done', progress: 100, message: `字幕已导出: ${srtPath}` });
-      } else {
-        // 无需翻译，直接导出
-        updatePipeline({ stage: 'exporting', progress: 0, message: '正在导出字幕...' });
-        const srtContent = generateSRT(entries, false);
-        const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
-        await invoke('save_file', { path: srtPath, content: srtContent });
-        updatePipeline({ stage: 'done', progress: 100, message: `字幕已导出: ${srtPath}` });
       }
+
+      // 阶段 5: 导出
+      updatePipeline({ stage: 'exporting', progress: 0, message: '正在导出字幕...' });
+      const isBilingual = config.translation.enabled && config.translation.bilingual;
+      const srtContent = generateSRT(finalEntries, isBilingual);
+      const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
+      await invoke('save_file', { path: srtPath, content: srtContent });
+      updatePipeline({ stage: 'done', progress: 100, message: `字幕已导出: ${srtPath}` });
     } catch (err) {
       if (!cancelledRef.current) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -151,14 +145,14 @@ export function usePipeline() {
   // 导出到自定义路径
   const exportSRT = useCallback(async (path: string) => {
     try {
-      const srtContent = generateSRT(pipeline.entries, config.subtitle.bilingual);
+      const srtContent = generateSRT(pipeline.entries, config.translation.bilingual);
       await invoke('save_file', { path, content: srtContent });
       updatePipeline({ message: `字幕已导出: ${path}` });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       updatePipeline({ stage: 'error', message: `导出失败: ${msg}`, error: msg });
     }
-  }, [pipeline.entries, config.subtitle.bilingual, updatePipeline]);
+  }, [pipeline.entries, config.translation.bilingual, updatePipeline]);
 
   return {
     config,

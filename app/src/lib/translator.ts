@@ -9,6 +9,22 @@ interface ChatCompletionResponse {
   }>;
 }
 
+/** 移除 LLM 深度思考标签内容 */
+function stripThinkingTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
+/** 构建请求头，API Key 为空时不发送 Authorization */
+function buildHeaders(apiKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+  return headers;
+}
+
 /**
  * 对一批字幕调用 LLM 翻译
  */
@@ -33,10 +49,7 @@ async function translateBatch(
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
+    headers: buildHeaders(config.apiKey),
     body: JSON.stringify(body),
   });
 
@@ -46,7 +59,7 @@ async function translateBatch(
   }
 
   const data = (await response.json()) as ChatCompletionResponse;
-  const content = data.choices?.[0]?.message?.content;
+  const content = stripThinkingTags(data.choices?.[0]?.message?.content || '');
   if (!content) {
     throw new Error('LLM returned empty response');
   }
@@ -114,7 +127,7 @@ export async function translateAll(
   config: AppConfig,
   onProgress?: (completed: number, total: number) => void
 ): Promise<SubtitleEntry[]> {
-  const { batchSize, targetLanguage } = config.subtitle;
+  const { batchSize, targetLanguage } = config.translation;
   const result = [...entries];
   const total = entries.length;
 
@@ -140,4 +153,46 @@ export async function translateAll(
   }
 
   return result;
+}
+
+export interface LLMTestResult {
+  reply: string;
+  hadThinkingTags: boolean;
+}
+
+/**
+ * 测试 LLM API 连通性，发送 "hi" 并返回响应
+ */
+export async function testLLMConnection(
+  config: AppConfig['llm']
+): Promise<LLMTestResult> {
+  const url = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+  const body = {
+    model: config.model,
+    messages: [
+      { role: 'user', content: 'hi' },
+    ],
+    max_tokens: 50,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: buildHeaders(config.apiKey),
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API ${response.status}: ${errorText}`);
+  }
+
+  const data = (await response.json()) as ChatCompletionResponse;
+  const raw = data.choices?.[0]?.message?.content || '';
+  const hadThinkingTags = /<think>[\s\S]*?<\/think>/i.test(raw);
+  const reply = stripThinkingTags(raw);
+  if (!reply) {
+    throw new Error('Empty response');
+  }
+
+  return { reply, hadThinkingTags };
 }

@@ -13,7 +13,8 @@ export interface AppConfig {
     apiKey: string;
     model: string;
   };
-  subtitle: {
+  translation: {
+    enabled: boolean;
     batchSize: number;
     bilingual: boolean;
     targetLanguage: string;
