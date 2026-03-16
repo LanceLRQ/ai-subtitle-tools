@@ -17,6 +17,24 @@ interface ChatCompletionChunk {
   }>;
 }
 
+/** 带超时的 reader.read() */
+function readWithTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  timeoutMs: number
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reader.cancel().catch(() => {});
+      reject(new Error(`Stream read timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+
+    reader.read().then(
+      (result) => { clearTimeout(timer); resolve(result); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
 /** 解析 SSE 流式响应，逐 token 回调 */
 async function readSSEStream(
   response: Response,
@@ -28,13 +46,28 @@ async function readSSEStream(
   const decoder = new TextDecoder();
   let accumulated = '';
   let buffer = '';
+  let emptyReadCount = 0;
+  const MAX_EMPTY_READS = 50;
+  const READ_TIMEOUT_MS = 120_000;
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readWithTimeout(reader, READ_TIMEOUT_MS);
       if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
+      const decoded = decoder.decode(value, { stream: true });
+
+      // 连续空读保护：防止连接异常时无限循环
+      if (!decoded) {
+        emptyReadCount++;
+        if (emptyReadCount >= MAX_EMPTY_READS) {
+          throw new Error('Stream connection lost (too many empty reads)');
+        }
+        continue;
+      }
+      emptyReadCount = 0;
+
+      buffer += decoded;
       const lines = buffer.split('\n');
       // 保留最后一行（可能不完整）
       buffer = lines.pop() || '';
@@ -104,10 +137,10 @@ async function translateBatch(
   const body: Record<string, unknown> = {
     model: config.model,
     messages: [
-      { role: 'system', content: '你是专业字幕翻译助手。' },
+      { role: 'system', content: 'You are a helpful assistant. Provide direct answers without any internal reasoning or step-by-step thinking process. Do not use tags. 你是专业字幕翻译助手。请直接回答问题，不要输出思考过程，不要使用任何推理标签。' },
       { role: 'user', content: userPrompt },
     ],
-    temperature: 0.3,
+    temperature: 0.1,
   };
 
   // 有流式回调时启用 stream 模式
