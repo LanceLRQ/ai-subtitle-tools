@@ -9,8 +9,10 @@ A cross-platform desktop tool for automated video subtitle generation and transl
 - **Speech Recognition** — FunASR API integration, supporting Qwen3-ASR, Paraformer and more
 - **Smart Segmentation** — Splits long text by punctuation, greedily merges into proper-length subtitle lines with word-level timestamp alignment
 - **Subtitle Translation** — Compatible with OpenAI-format LLM APIs, batch translation, supports reasoning models (auto-filters `<think>` tags)
+- **Glossary** — Define `source -> translation` term mappings injected into LLM prompts, ensuring consistent translation of character names, place names, etc.
 - **Bilingual Subtitles** — Export original + translated bilingual SRT
 - **Multi-language** — Target languages include Chinese, English, Japanese, Korean, Spanish, Portuguese, or custom input
+- **Bilingual UI** — Chinese / English interface switching
 - **Cross-platform** — Built on Tauri, supports Windows, macOS, Linux
 - **Debug Mode** — Save raw ASR JSON and LLM request logs for troubleshooting
 
@@ -103,6 +105,7 @@ App configuration is automatically saved to the system config directory:
 | LLM | Model | `gpt-4o-mini` | Any compatible model |
 | Translation | Batch Size | 100 | Subtitles per API request (1-200) |
 | Translation | Target Language | Chinese | Supports custom input |
+| Translation | Glossary | (empty) | One `source -> translation` per line, injected into LLM prompts |
 | Subtitle | Max Chars Per Line | 30 | Maximum characters per subtitle line after punctuation splitting |
 
 ## Project Structure
@@ -114,6 +117,7 @@ ai-subtitle-tools/
 │   │   ├── app/                # Next.js pages
 │   │   ├── components/         # UI components
 │   │   │   ├── FilePicker      #   File selection
+│   │   │   ├── GlossaryPanel   #   Glossary term mapping
 │   │   │   ├── SettingsPanel   #   Settings panel
 │   │   │   ├── ProgressBar     #   Progress indicator
 │   │   │   └── SubtitlePreview #   Subtitle preview table
