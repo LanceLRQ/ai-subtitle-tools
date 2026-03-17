@@ -102,6 +102,11 @@ function stripThinkingTags(text: string): string {
   return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 }
 
+/** 移除残留的尖括号标签（如 <|im_end|>、<|endoftext|> 等） */
+function stripAllTags(text: string): string {
+  return text.replace(/<[^>]*>/g, '').trim();
+}
+
 /** 构建请求头，API Key 为空时不发送 Authorization */
 function buildHeaders(apiKey: string): Record<string, string> {
   const headers: Record<string, string> = {
@@ -186,7 +191,7 @@ async function translateBatch(
   }
 
   const hadThinkingTags = /<think>[\s\S]*?<\/think>/i.test(rawResponse);
-  const content = stripThinkingTags(rawResponse);
+  const content = stripAllTags(stripThinkingTags(rawResponse));
   if (!content) {
     throw new Error('LLM returned empty response');
   }
@@ -358,7 +363,7 @@ export async function testLLMConnection(
   const data = (await response.json()) as ChatCompletionResponse;
   const raw = data.choices?.[0]?.message?.content || '';
   const hadThinkingTags = /<think>[\s\S]*?<\/think>/i.test(raw);
-  const reply = stripThinkingTags(raw);
+  const reply = stripAllTags(stripThinkingTags(raw));
   if (!reply) {
     throw new Error('Empty response');
   }

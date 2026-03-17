@@ -41,19 +41,25 @@ services:
     volumes:
       - ./llama_model:/models
     command: >
-      -m /models/Qwen3.5-4B-Q4_K_M.gguf
-      -ctk q4_0
+      -m /models/translategemma-4b-it.Q4_K_M.gguf
       --host 0.0.0.0
       --ctx-size 32768
-      --gpu-layers 99
+      --gpu-layers 999
       --flash-attn on
+      --batch-size 4096
+      --ubatch-size 1024
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      --cont-batching
       --chat-template-kwargs '{"enable_thinking": false}'
       --repeat-penalty 1.0
       --presence-penalty 1.5
       --min-p 0.0
       --top-k 20
       --top-p 0.8
-      --temp 0.7
+      --temp 0.1
+      --no-jinja
+      --chat-template chatml
     networks:
       - app-network
 

@@ -82,9 +82,9 @@ cd services
 | Service | Port | Description |
 |---------|------|-------------|
 | FunASR API | 17000 | Speech recognition service, loads Qwen3-ASR 1.7B by default |
-| llama.cpp Server | 17001 | LLM translation service, using quantized Qwen3.5-4B model |
+| llama.cpp Server | 17001 | LLM translation service, using quantized [translategemma-4b-it](https://huggingface.co/mradermacher/translategemma-4b-it-GGUF) model |
 
-> Place your GGUF model file in the `services/llama_model/` directory before using the llama.cpp service.
+> Download the [translategemma-4b-it-GGUF](https://huggingface.co/mradermacher/translategemma-4b-it-GGUF) model file and place it in the `services/llama_model/` directory before using the llama.cpp service.
 
 ## Configuration
 

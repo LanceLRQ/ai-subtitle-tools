@@ -82,9 +82,9 @@ cd services
 | 服务 | 端口 | 说明 |
 |------|------|------|
 | FunASR API | 17000 | 语音识别服务，默认加载 Qwen3-ASR 1.7B |
-| llama.cpp Server | 17001 | LLM 翻译服务，使用 Qwen3.5-4B 量化模型 |
+| llama.cpp Server | 17001 | LLM 翻译服务，使用 [translategemma-4b-it](https://huggingface.co/mradermacher/translategemma-4b-it-GGUF) 量化模型 |
 
-> 使用 llama.cpp 服务前，需将 GGUF 模型文件放入 `services/llama_model/` 目录。
+> 使用 llama.cpp 服务前，需下载 [translategemma-4b-it-GGUF](https://huggingface.co/mradermacher/translategemma-4b-it-GGUF) 模型文件放入 `services/llama_model/` 目录。
 
 ## 配置说明
 

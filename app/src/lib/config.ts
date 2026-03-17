@@ -16,7 +16,7 @@ export function getDefaultConfig(): AppConfig {
     llm: {
       baseUrl: 'https://api.openai.com/v1',
       apiKey: '',
-      model: 'gpt-4o-mini',
+      model: 'translategemma-4b-it',
     },
     translation: {
       enabled: false,
