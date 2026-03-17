@@ -58,7 +58,7 @@ pub async fn upload_audio_to_asr(
     cmd.arg("-s").arg("-S")
        .arg("-w").arg("\n%{http_code}")
        .arg("-X").arg("POST")
-       .arg("-F").arg(format!("file=@{};type=audio/wav", audio_path))
+       .arg("-F").arg(format!("file=@{}", audio_path))
        .arg("-F").arg(format!("model={}", model))
        .arg("-F").arg("response_format=verbose_json")
        .arg("-F").arg("language=auto")
