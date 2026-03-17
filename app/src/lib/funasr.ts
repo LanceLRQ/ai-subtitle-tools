@@ -1,5 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
 import { fetch } from '@tauri-apps/plugin-http';
+import { readFile } from '@tauri-apps/plugin-fs';
 import type { AppConfig, SubtitleEntry, FunASRResponse, FunASRSegment, FunASRWordToken } from './types';
 
 /**
@@ -17,8 +17,8 @@ export async function recognizeSpeech(
   audioFilePath: string,
   config: AppConfig['funasr']
 ): Promise<AsrResult> {
-  // 读取音频文件二进制（Rust 侧通过 tauri::ipc::Response 返回原始字节）
-  const audioData = new Uint8Array(await invoke<ArrayBuffer>('read_file_bytes', { path: audioFilePath }));
+  // 通过 fs 插件读取音频文件二进制，原生支持高效二进制传输
+  const audioData = await readFile(audioFilePath);
 
   // 构造 multipart/form-data
   const formData = new FormData();
