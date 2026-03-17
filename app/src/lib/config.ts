@@ -23,6 +23,7 @@ export function getDefaultConfig(): AppConfig {
       batchSize: 50,
       bilingual: true,
       targetLanguage: '中文',
+      glossary: '',
     },
     subtitle: {
       maxCharsPerLine: 30,

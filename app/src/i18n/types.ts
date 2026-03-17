@@ -94,7 +94,13 @@ export interface TranslationDict {
   // Log panel
   'logPanel.empty': string;
 
+  // Glossary panel
+  'glossary.title': string;
+  'glossary.placeholder': string;
+  'glossary.hint': string;
+
   // Log tabs
+  'logTabs.glossary': string;
   'logTabs.log': string;
   'logTabs.preview': string;
   'logTabs.previewCount': string;

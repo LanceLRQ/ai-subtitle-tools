@@ -19,6 +19,7 @@ export interface AppConfig {
     batchSize: number;
     bilingual: boolean;
     targetLanguage: string;
+    glossary: string;
   };
   subtitle: {
     maxCharsPerLine: number;

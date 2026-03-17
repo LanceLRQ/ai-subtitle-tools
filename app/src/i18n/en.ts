@@ -94,7 +94,13 @@ const en: TranslationDict = {
   // Log panel
   'logPanel.empty': 'No logs yet',
 
+  // Glossary panel
+  'glossary.title': 'Glossary',
+  'glossary.placeholder': 'One entry per line:\nsource -> translation\n\ne.g.\nフリーレン -> Frieren',
+  'glossary.hint': 'Terms will be included in LLM prompts during translation',
+
   // Log tabs
+  'logTabs.glossary': 'Glossary',
   'logTabs.log': 'Logs',
   'logTabs.preview': 'Preview',
   'logTabs.previewCount': 'Preview ({count})',

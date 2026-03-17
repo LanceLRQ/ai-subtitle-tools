@@ -94,7 +94,13 @@ const zh: TranslationDict = {
   // Log panel
   'logPanel.empty': '暂无日志',
 
+  // Glossary panel
+  'glossary.title': '专有名词',
+  'glossary.placeholder': '每行一个词条，格式：\n原文 -> 译文\n\n例如：\nフリーレン -> 芙莉莲',
+  'glossary.hint': '翻译时将提醒 LLM 使用指定译名',
+
   // Log tabs
+  'logTabs.glossary': '专有名词',
   'logTabs.log': '运行日志',
   'logTabs.preview': '字幕预览',
   'logTabs.previewCount': '字幕预览 ({count} 条)',

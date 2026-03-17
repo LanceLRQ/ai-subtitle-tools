@@ -11,6 +11,7 @@ import Tooltip from '@/components/Tooltip';
 import FilePicker from '@/components/FilePicker';
 import ProgressBar from '@/components/ProgressBar';
 import LogTabs from '@/components/LogTabs';
+import type { LogTabType } from '@/components/LogTabs';
 import { save } from '@tauri-apps/plugin-dialog';
 
 export default function Home() {
@@ -33,7 +34,7 @@ export default function Home() {
   } = usePipeline(log);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'log' | 'preview'>('log');
+  const [activeTab, setActiveTab] = useState<LogTabType>('glossary');
 
   // Sync locale from config
   useEffect(() => {
@@ -141,12 +142,17 @@ export default function Home() {
           stageLabel={stageLabel}
         />
 
-        {/* 日志 + 字幕预览 */}
+        {/* 专有名词 + 日志 + 字幕预览 */}
         <LogTabs
           logs={log.logs}
           entries={pipeline.entries}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          glossary={config.translation.glossary}
+          onGlossaryChange={(v) => updateConfig({
+            ...config,
+            translation: { ...config.translation, glossary: v },
+          })}
         />
       </div>
     </div>

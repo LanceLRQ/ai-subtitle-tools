@@ -127,11 +127,26 @@ async function translateBatch(
   texts: string[],
   config: AppConfig['llm'],
   targetLanguage: string,
+  glossary?: string,
   onStream?: (chunk: string) => void
 ): Promise<TranslateBatchResult> {
   const numberedTexts = texts.map((t, i) => `${i + 1}. ${t}`).join('\n');
-  const userPrompt =
-    `Translate the following subtitle lines into ${targetLanguage}. One line per entry, keep the original order, return only the translations (each line formatted as "number. translation"):\n${numberedTexts}`;
+
+  // 解析并构建 glossary 段落
+  let glossarySection = '';
+  if (glossary?.trim()) {
+    const lines = glossary
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.includes('->'));
+    if (lines.length > 0) {
+      glossarySection = `\nGlossary (use these translations for specific terms):\n${lines.join('\n')}\n`;
+    }
+  }
+
+  const userPrompt = glossarySection
+    ? `Translate the following subtitle lines into ${targetLanguage}.${glossarySection}One line per entry, keep the original order, return only the translations (each line formatted as "number. translation"):\n${numberedTexts}`
+    : `Translate the following subtitle lines into ${targetLanguage}. One line per entry, keep the original order, return only the translations (each line formatted as "number. translation"):\n${numberedTexts}`;
 
   const url = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
   const body: Record<string, unknown> = {
@@ -214,6 +229,7 @@ async function translateBatchWithRetry(
   texts: string[],
   config: AppConfig['llm'],
   targetLanguage: string,
+  glossary?: string,
   maxRetries: number = 3,
   onStream?: (chunk: string) => void
 ): Promise<TranslateBatchResult> {
@@ -221,7 +237,7 @@ async function translateBatchWithRetry(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      return await translateBatch(texts, config, targetLanguage, onStream);
+      return await translateBatch(texts, config, targetLanguage, glossary, onStream);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       if (attempt < maxRetries - 1) {
@@ -258,7 +274,7 @@ export async function translateAll(
     onDone: () => void;
   }
 ): Promise<SubtitleEntry[]> {
-  const { batchSize, targetLanguage } = config.translation;
+  const { batchSize, targetLanguage, glossary } = config.translation;
   const result = [...entries];
   const total = entries.length;
   const totalBatches = Math.ceil(total / batchSize);
@@ -278,6 +294,7 @@ export async function translateAll(
       texts,
       config.llm,
       targetLanguage,
+      glossary || undefined,
       3,
       onStream
     );
