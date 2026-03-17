@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, Component};
+use tauri::ipc::Response;
 
 /// 校验路径安全性：拒绝路径遍历攻击
 fn validate_path(path: &str) -> Result<(), String> {
@@ -20,6 +21,26 @@ fn validate_path(path: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// 将文件名中的非安全字符替换为下划线，并去除首尾空白
+fn sanitize_filename(name: &str) -> String {
+    let sanitized: String = name
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let trimmed = sanitized.trim_matches('_');
+    if trimmed.is_empty() {
+        "audio".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 /// 在系统临时目录下生成音频文件路径
 #[tauri::command]
 pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
@@ -30,6 +51,8 @@ pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
         .ok_or("Invalid video file path")?
         .to_string_lossy();
 
+    let safe_stem = sanitize_filename(&stem);
+
     // 使用系统临时目录，加 pid 避免多实例冲突
     let temp_dir = std::env::temp_dir();
     let app_temp = temp_dir.join("ai-subtitle-tools");
@@ -38,7 +61,7 @@ pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
 
     let audio_path = app_temp.join(format!(
         "{}_{}.wav",
-        stem,
+        safe_stem,
         std::process::id()
     ));
 
@@ -125,8 +148,11 @@ pub fn save_file(path: String, content: String) -> Result<(), String> {
 }
 
 /// 读取文件二进制内容（音频上传用）
+///
+/// 返回 `tauri::ipc::Response` 以使用二进制 IPC 传输，
+/// 避免 `Vec<u8>` 被 JSON 序列化为数字数组导致的严重性能问题。
 #[tauri::command]
-pub fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
+pub fn read_file_bytes(path: String) -> Result<Response, String> {
     validate_path(&path)?;
 
     // 限制只能读取音频文件
@@ -145,8 +171,10 @@ pub fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
         ));
     }
 
-    fs::read(&path)
-        .map_err(|e| format!("Failed to read file '{}': {}", path, e))
+    let bytes = fs::read(&path)
+        .map_err(|e| format!("Failed to read file '{}': {}", path, e))?;
+
+    Ok(Response::new(bytes))
 }
 
 /// 删除临时文件
