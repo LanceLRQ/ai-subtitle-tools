@@ -7,6 +7,7 @@ import { loadConfig, saveConfig, getDefaultConfig } from '@/lib/config';
 import { detectFFmpeg } from '@/lib/ffmpegDetector';
 import { extractAudio, getTempAudioPath, cleanupTempFiles } from '@/lib/ffmpeg';
 import { recognizeSpeech } from '@/lib/funasr';
+import { recognizeSpeechAliyun } from '@/lib/aliyunAsr';
 import { splitSegments } from '@/lib/subtitleSplitter';
 import { translateAll } from '@/lib/translator';
 import { generateSRT } from '@/lib/subtitle';
@@ -129,7 +130,21 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         const fakeProgress = Math.round(5 + 50 * t / (t + K));
         updatePipeline({ progress: fakeProgress });
       }, 1000);
-      const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
+      let asrResult;
+      if (config.asrProvider === 'aliyun') {
+        asrResult = await recognizeSpeechAliyun(
+          tempAudioPath,
+          config.aliyunAsr,
+          (message) => {
+            const key = message as keyof import('@/i18n/types').TranslationDict;
+            updatePipeline({ message: tRef.current(key) });
+            log?.addLog('info', tRef.current(key));
+          },
+          () => cancelledRef.current
+        );
+      } else {
+        asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
+      }
       if (asrTimerRef.current) {
         clearInterval(asrTimerRef.current);
         asrTimerRef.current = null;

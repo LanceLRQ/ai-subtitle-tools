@@ -45,6 +45,10 @@ export interface TranslationDict {
   'pipeline.enableTranslationFirst': string;
   'pipeline.translationNotEnabled': string;
   'pipeline.cancelled': string;
+  'pipeline.uploadingAudio': string;
+  'pipeline.asrTaskSubmitted': string;
+  'pipeline.asrTaskPolling': string;
+  'pipeline.asrTaskDownloading': string;
 
   // Settings panel
   'settings.language.label': string;
@@ -54,9 +58,14 @@ export interface TranslationDict {
   'settings.ffmpeg.sourceConfig': string;
   'settings.ffmpeg.sourceLocal': string;
   'settings.ffmpeg.sourceSystem': string;
+  'settings.asr.legend': string;
+  'settings.asr.providerLocal': string;
+  'settings.asr.providerAliyun': string;
   'settings.funasr.legend': string;
   'settings.funasr.apiKeyPlaceholder': string;
   'settings.funasr.modelPlaceholder': string;
+  'settings.aliyunAsr.apiKeyPlaceholder': string;
+  'settings.aliyunAsr.modelPlaceholder': string;
   'settings.llm.legend': string;
   'settings.llm.testConnection': string;
   'settings.llm.testing': string;

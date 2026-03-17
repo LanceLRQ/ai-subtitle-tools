@@ -1,17 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { fetch } from '@tauri-apps/plugin-http';
-import type { AppConfig, SubtitleEntry, FunASRResponse, FunASRSegment, FunASRWordToken } from './types';
+import type { AppConfig, AsrResult, FunASRResponse, FunASRSegment, FunASRWordToken } from './types';
 
-/**
- * 调用 FunASR API 识别音频文件
- *
- * 通过 Rust 读取音频二进制，然后 HTTP multipart 上传到 FunASR 服务
- */
-export interface AsrResult {
-  entries: SubtitleEntry[];
-  segments: FunASRSegment[];
-  rawResponse: unknown;
-}
+export type { AsrResult } from './types';
 
 export async function recognizeSpeech(
   audioFilePath: string,

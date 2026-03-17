@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { AppConfig, FFmpegDetectResult } from '@/lib/types';
+import type { AppConfig, AsrProvider, FFmpegDetectResult } from '@/lib/types';
 import { testLLMConnection } from '@/lib/translator';
 import { useI18n } from '@/i18n';
 import type { Locale } from '@/i18n';
@@ -13,10 +13,17 @@ interface SettingsPanelProps {
   onDetectFFmpeg: () => void;
 }
 
-const ASR_MODELS = [
+const LOCAL_ASR_MODELS = [
   { value: 'qwen3-asr-1.7b', label: 'Qwen3-ASR 1.7B' },
   { value: 'qwen3-asr-0.6b', label: 'Qwen3-ASR 0.6B' },
   { value: 'paraformer-large', label: 'Paraformer Large' },
+];
+
+const ALIYUN_ASR_MODELS = [
+  { value: 'qwen3-asr-flash-filetrans', label: 'Qwen3-ASR Flash Filetrans' },
+  { value: 'paraformer-v2', label: 'Paraformer V2' },
+  { value: 'fun-asr', label: 'Fun-ASR' },
+  { value: 'fun-asr-mtl', label: 'Fun-ASR MTL' },
 ];
 
 const TARGET_LANGUAGES = [
@@ -218,32 +225,73 @@ export default function SettingsPanel({
         )}
       </fieldset>
 
-      {/* FunASR */}
+      {/* 语音识别 */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.funasr.legend')}</legend>
-        <input
-          type="text"
-          value={config.funasr.url}
-          onChange={(e) => update('funasr', 'url', e.target.value)}
-          placeholder="API URL"
-          className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
-        />
-        <div className="flex gap-2">
-          <input
-            type="password"
-            value={config.funasr.apiKey}
-            onChange={(e) => update('funasr', 'apiKey', e.target.value)}
-            placeholder={t('settings.funasr.apiKeyPlaceholder')}
-            className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
-          />
-          <ComboBox
-            value={config.funasr.model}
-            onChange={(v) => update('funasr', 'model', v)}
-            options={ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
-            placeholder={t('settings.funasr.modelPlaceholder')}
-            className="w-52"
-          />
-        </div>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.asr.legend')}</legend>
+        <select
+          value={config.asrProvider}
+          onChange={(e) => onConfigChange({ ...config, asrProvider: e.target.value as AsrProvider })}
+          className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200"
+        >
+          <option value="local">{t('settings.asr.providerLocal')}</option>
+          <option value="aliyun">{t('settings.asr.providerAliyun')}</option>
+        </select>
+
+        {config.asrProvider === 'local' && (
+          <>
+            <input
+              type="text"
+              value={config.funasr.url}
+              onChange={(e) => update('funasr', 'url', e.target.value)}
+              placeholder="API URL"
+              className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={config.funasr.apiKey}
+                onChange={(e) => update('funasr', 'apiKey', e.target.value)}
+                placeholder={t('settings.funasr.apiKeyPlaceholder')}
+                className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+              <ComboBox
+                value={config.funasr.model}
+                onChange={(v) => update('funasr', 'model', v)}
+                options={LOCAL_ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
+                placeholder={t('settings.funasr.modelPlaceholder')}
+                className="w-52"
+              />
+            </div>
+          </>
+        )}
+
+        {config.asrProvider === 'aliyun' && (
+          <>
+            <input
+              type="text"
+              value={config.aliyunAsr.baseUrl}
+              onChange={(e) => update('aliyunAsr', 'baseUrl', e.target.value)}
+              placeholder="API URL"
+              className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={config.aliyunAsr.apiKey}
+                onChange={(e) => update('aliyunAsr', 'apiKey', e.target.value)}
+                placeholder={t('settings.aliyunAsr.apiKeyPlaceholder')}
+                className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+              <ComboBox
+                value={config.aliyunAsr.model}
+                onChange={(v) => update('aliyunAsr', 'model', v)}
+                options={ALIYUN_ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
+                placeholder={t('settings.aliyunAsr.modelPlaceholder')}
+                className="w-52"
+              />
+            </div>
+          </>
+        )}
       </fieldset>
 
       {/* LLM */}

@@ -1,11 +1,27 @@
+/** ASR 提供者类型 */
+export type AsrProvider = 'local' | 'aliyun';
+
+/** ASR 识别结果（通用接口） */
+export interface AsrResult {
+  entries: SubtitleEntry[];
+  segments: FunASRSegment[];
+  rawResponse: unknown;
+}
+
 /** 应用配置 */
 export interface AppConfig {
   language: 'zh' | 'en';
   ffmpeg: {
     path: string;
   };
+  asrProvider: AsrProvider;
   funasr: {
     url: string;
+    apiKey: string;
+    model: string;
+  };
+  aliyunAsr: {
+    baseUrl: string;
     apiKey: string;
     model: string;
   };

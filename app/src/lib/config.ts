@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { AppConfig } from './types';
+import type { AppConfig, AsrProvider } from './types';
 
 /** 默认配置 */
 export function getDefaultConfig(): AppConfig {
@@ -8,10 +8,16 @@ export function getDefaultConfig(): AppConfig {
     ffmpeg: {
       path: '',
     },
+    asrProvider: 'local' as AsrProvider,
     funasr: {
       url: 'http://127.0.0.1:17000',
       apiKey: '',
       model: 'qwen3-asr-1.7b',
+    },
+    aliyunAsr: {
+      baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+      apiKey: '',
+      model: 'qwen3-asr-flash-filetrans',
     },
     llm: {
       baseUrl: 'https://api.openai.com/v1',
@@ -45,7 +51,9 @@ export async function loadConfig(): Promise<AppConfig> {
     return {
       language: saved.language ?? defaults.language,
       ffmpeg: { ...defaults.ffmpeg, ...saved.ffmpeg },
+      asrProvider: saved.asrProvider ?? defaults.asrProvider,
       funasr: { ...defaults.funasr, ...saved.funasr },
+      aliyunAsr: { ...defaults.aliyunAsr, ...saved.aliyunAsr },
       llm: { ...defaults.llm, ...saved.llm },
       translation: { ...defaults.translation, ...saved.translation },
       subtitle: { ...defaults.subtitle, ...saved.subtitle },
