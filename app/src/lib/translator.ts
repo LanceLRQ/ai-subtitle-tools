@@ -1,4 +1,7 @@
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { fetch } from '@tauri-apps/plugin-http';
+import { isMacOS } from './platform';
 import type { AppConfig, SubtitleEntry } from './types';
 
 interface ChatCompletionResponse {
@@ -125,6 +128,63 @@ interface TranslateBatchResult {
   hadThinkingTags: boolean;
 }
 
+/** macOS: 通过 Rust curl 发送 LLM 请求 */
+async function fetchViaCurl(
+  url: string,
+  config: AppConfig['llm'],
+  bodyJson: string,
+  onStream?: (chunk: string) => void
+): Promise<string> {
+  if (onStream) {
+    const unlisten = await listen<{ content: string }>('llm-stream-chunk', (event) => {
+      onStream(event.payload.content);
+    });
+    try {
+      return await invoke<string>('curl_post_stream', {
+        url,
+        apiKey: config.apiKey || '',
+        body: bodyJson,
+      });
+    } finally {
+      unlisten();
+    }
+  } else {
+    const responseBody = await invoke<string>('curl_post_json', {
+      url,
+      apiKey: config.apiKey || '',
+      body: bodyJson,
+    });
+    const data = JSON.parse(responseBody) as ChatCompletionResponse;
+    return data.choices?.[0]?.message?.content || '';
+  }
+}
+
+/** Windows/Linux: 通过 Tauri HTTP 插件 fetch 发送 LLM 请求 */
+async function fetchViaPlugin(
+  url: string,
+  config: AppConfig['llm'],
+  bodyJson: string,
+  onStream?: (chunk: string) => void
+): Promise<string> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: buildHeaders(config.apiKey),
+    body: bodyJson,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`LLM API error (${response.status}): ${errorText}`);
+  }
+
+  if (onStream) {
+    return await readSSEStream(response, onStream);
+  } else {
+    const data = (await response.json()) as ChatCompletionResponse;
+    return data.choices?.[0]?.message?.content || '';
+  }
+}
+
 /**
  * 对一批字幕调用 LLM 翻译
  */
@@ -163,32 +223,16 @@ async function translateBatch(
     temperature: 0.3,
   };
 
-  // 有流式回调时启用 stream 模式
   if (onStream) {
     body.stream = true;
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: buildHeaders(config.apiKey),
-    body: JSON.stringify(body),
-  });
+  const bodyJson = JSON.stringify(body);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`LLM API error (${response.status}): ${errorText}`);
-  }
-
-  let rawResponse: string;
-
-  if (onStream) {
-    // 流式模式：通过 SSE 逐 token 接收
-    rawResponse = await readSSEStream(response, onStream);
-  } else {
-    // 非流式模式：一次性读取
-    const data = (await response.json()) as ChatCompletionResponse;
-    rawResponse = data.choices?.[0]?.message?.content || '';
-  }
+  // macOS 走 curl（Tauri 进程内 HTTP 受系统网络策略限制），其他平台走 Tauri HTTP 插件
+  const rawResponse = isMacOS()
+    ? await fetchViaCurl(url, config, bodyJson, onStream)
+    : await fetchViaPlugin(url, config, bodyJson, onStream);
 
   const hadThinkingTags = /<think>[\s\S]*?<\/think>/i.test(rawResponse);
   const content = stripAllTags(stripThinkingTags(rawResponse));
@@ -349,19 +393,29 @@ export async function testLLMConnection(
     max_tokens: 50,
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: buildHeaders(config.apiKey),
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API ${response.status}: ${errorText}`);
+  let raw: string;
+  if (isMacOS()) {
+    const responseBody = await invoke<string>('curl_post_json', {
+      url,
+      apiKey: config.apiKey || '',
+      body: JSON.stringify(body),
+    });
+    const data = JSON.parse(responseBody) as ChatCompletionResponse;
+    raw = data.choices?.[0]?.message?.content || '';
+  } else {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: buildHeaders(config.apiKey),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API ${response.status}: ${errorText}`);
+    }
+    const data = (await response.json()) as ChatCompletionResponse;
+    raw = data.choices?.[0]?.message?.content || '';
   }
 
-  const data = (await response.json()) as ChatCompletionResponse;
-  const raw = data.choices?.[0]?.message?.content || '';
   const hadThinkingTags = /<think>[\s\S]*?<\/think>/i.test(raw);
   const reply = stripAllTags(stripThinkingTags(raw));
   if (!reply) {

@@ -15,15 +15,10 @@
     "fs:allow-write-text-file",
     "fs:allow-exists",
     "fs:allow-mkdir",
-    "fs:allow-read-file",
     "fs:allow-app-read-recursive",
     "fs:allow-app-write-recursive",
     "fs:allow-appconfig-read-recursive",
     "fs:allow-appconfig-write-recursive",
-    {
-      "identifier": "fs:scope",
-      "allow": [{ "path": "$TEMP/ai-subtitle-tools/**" }]
-    },
     {
       "identifier": "http:default",
       "allow": [

@@ -1,11 +1,11 @@
-import { fetch } from '@tauri-apps/plugin-http';
-import { readFile } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 import type { AppConfig, SubtitleEntry, FunASRResponse, FunASRSegment, FunASRWordToken } from './types';
 
 /**
  * 调用 FunASR API 识别音频文件
  *
- * 通过 Rust 读取音频二进制，然后 HTTP multipart 上传到 FunASR 服务
+ * 通过 Rust 侧直接读取音频文件并 multipart 上传到 FunASR 服务，
+ * 避免大文件经过 JS 层 IPC 导致卡死。
  */
 export interface AsrResult {
   entries: SubtitleEntry[];
@@ -17,38 +17,15 @@ export async function recognizeSpeech(
   audioFilePath: string,
   config: AppConfig['funasr']
 ): Promise<AsrResult> {
-  // 通过 fs 插件读取音频文件二进制，原生支持高效二进制传输
-  const audioData = await readFile(audioFilePath);
-
-  // 构造 multipart/form-data
-  const formData = new FormData();
-  const audioBlob = new Blob([audioData], { type: 'audio/wav' });
-  formData.append('file', audioBlob, 'audio.wav');
-  formData.append('model', config.model);
-  formData.append('response_format', 'verbose_json');
-  formData.append('language', 'auto');
-  formData.append('word_timestamps', 'true');
-
-  // 构造请求头
-  const headers: Record<string, string> = {};
-  if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
-  }
-
-  // 发送请求
-  const url = `${config.url.replace(/\/+$/, '')}/v1/audio/transcriptions`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: formData,
+  // Rust 侧完成文件读取和 HTTP 上传，返回 JSON 字符串
+  const responseBody = await invoke<string>('upload_audio_to_asr', {
+    audioPath: audioFilePath,
+    asrUrl: config.url,
+    apiKey: config.apiKey || '',
+    model: config.model,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`FunASR API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as FunASRResponse;
+  const data = JSON.parse(responseBody) as FunASRResponse;
 
   // 将 segments 映射为 SubtitleEntry
   if (!data.segments || data.segments.length === 0) {

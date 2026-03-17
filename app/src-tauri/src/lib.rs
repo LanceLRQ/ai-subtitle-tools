@@ -1,6 +1,7 @@
 mod config;
 mod ffmpeg;
 mod file_ops;
+mod http;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -9,6 +10,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
+            http::upload_audio_to_asr,
+            http::curl_post_stream,
+            http::curl_post_json,
             config::read_config,
             config::write_config,
             ffmpeg::check_ffmpeg_version,
