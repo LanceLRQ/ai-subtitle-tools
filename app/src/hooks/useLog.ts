@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { LogLevel, LogEntry } from '@/lib/types';
 
 let logIdCounter = 0;
@@ -20,7 +20,9 @@ export interface PipelineLogCallbacks {
 export function useLog(): PipelineLogCallbacks & { logs: LogEntry[] } {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logsRef = useRef(logs);
-  logsRef.current = logs;
+  useEffect(() => {
+    logsRef.current = logs;
+  }, [logs]);
 
   const addLog = useCallback((level: LogLevel, message: string) => {
     const entry: LogEntry = {

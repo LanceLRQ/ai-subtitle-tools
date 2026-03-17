@@ -41,12 +41,10 @@ export default function Home() {
     setLocale(config.language);
   }, [config.language, setLocale]);
 
-  // 开始处理时自动切换到日志 tab
-  useEffect(() => {
-    if (isProcessing) {
-      setActiveTab('log');
-    }
-  }, [isProcessing]);
+  const handleStart = () => {
+    setActiveTab('log');
+    startProcessing();
+  };
 
   const handleExport = async () => {
     const path = await save({
@@ -100,7 +98,7 @@ export default function Home() {
         <div className="flex gap-3">
           {!isProcessing ? (
             <button
-              onClick={startProcessing}
+              onClick={handleStart}
               disabled={!videoPath}
               className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
             >
