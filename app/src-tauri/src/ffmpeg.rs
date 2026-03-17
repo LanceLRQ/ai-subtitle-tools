@@ -184,7 +184,7 @@ fn parse_ffmpeg_progress(line: &str) -> Option<f64> {
     if line.contains("time=") {
         if let Some(time_str) = line.split("time=").nth(1) {
             let time_part = time_str.split_whitespace().next().unwrap_or("");
-            if let Some(_) = parse_time_to_seconds(time_part) {
+            if parse_time_to_seconds(time_part).is_some() {
                 return None;
             }
         }
