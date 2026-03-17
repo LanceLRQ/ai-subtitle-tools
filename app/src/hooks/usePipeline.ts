@@ -12,19 +12,21 @@ import { translateAll } from '@/lib/translator';
 import { generateSRT } from '@/lib/subtitle';
 import { writeAsrDebugLog, appendLlmDebugLog } from '@/lib/debugLog';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@/i18n';
 
-const STAGE_LABELS: Record<PipelineStage, string> = {
-  'idle': '就绪',
-  'detecting-ffmpeg': '检测 FFmpeg...',
-  'extracting-audio': '提取音频...',
-  'recognizing': '语音识别中...',
-  'translating': '翻译中...',
-  'exporting': '导出字幕...',
-  'done': '完成',
-  'error': '出错',
+const STAGE_KEY_MAP: Record<PipelineStage, string> = {
+  'idle': 'idle',
+  'detecting-ffmpeg': 'detectingFfmpeg',
+  'extracting-audio': 'extractingAudio',
+  'recognizing': 'recognizing',
+  'translating': 'translating',
+  'exporting': 'exporting',
+  'done': 'done',
+  'error': 'error',
 };
 
 export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
+  const { t } = useI18n();
   const [config, setConfig] = useState<AppConfig>(getDefaultConfig());
   const [pipeline, setPipeline] = useState<PipelineState>({
     stage: 'idle',
@@ -37,6 +39,10 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
   const cancelledRef = useRef(false);
   const logRef = useRef(logCallbacks);
   logRef.current = logCallbacks;
+
+  // Store t in a ref so callbacks always use the latest locale
+  const tRef = useRef(t);
+  tRef.current = t;
 
   // 加载配置
   useEffect(() => {
@@ -60,24 +66,26 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
 
   // 检测 FFmpeg
   const runDetectFFmpeg = useCallback(async () => {
+    const t = tRef.current;
     try {
-      updatePipeline({ stage: 'detecting-ffmpeg', progress: 0, message: '正在检测 FFmpeg...' });
+      updatePipeline({ stage: 'detecting-ffmpeg', progress: 0, message: t('pipeline.detectingFfmpeg') });
       const result = await detectFFmpeg(config.ffmpeg.path || undefined);
       setFFmpegInfo(result);
-      updatePipeline({ stage: 'idle', progress: 0, message: `FFmpeg 已就绪: ${result.version}` });
+      updatePipeline({ stage: 'idle', progress: 0, message: t('pipeline.ffmpegReady', { version: result.version }) });
       return result;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setFFmpegInfo(null);
-      updatePipeline({ stage: 'error', message: `FFmpeg 检测失败: ${msg}`, error: msg });
+      updatePipeline({ stage: 'error', message: t('pipeline.ffmpegFailed', { error: msg }), error: msg });
       return null;
     }
   }, [config.ffmpeg.path, updatePipeline]);
 
   // 开始处理流水线
   const startProcessing = useCallback(async () => {
+    const t = tRef.current;
     if (!videoPath) {
-      updatePipeline({ stage: 'error', message: '请先选择视频文件', error: '未选择视频文件' });
+      updatePipeline({ stage: 'error', message: t('pipeline.selectVideoFirst'), error: t('pipeline.noVideoSelected') });
       return;
     }
 
@@ -90,31 +98,31 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
 
     try {
       // 阶段 1: 检测 FFmpeg
-      updatePipeline({ stage: 'detecting-ffmpeg', progress: 0, message: '正在检测 FFmpeg...', error: undefined });
-      log?.addLog('info', '正在检测 FFmpeg...');
+      updatePipeline({ stage: 'detecting-ffmpeg', progress: 0, message: t('pipeline.detectingFfmpeg'), error: undefined });
+      log?.addLog('info', t('pipeline.detectingFfmpeg'));
       const ffmpeg = ffmpegInfo || (await detectFFmpeg(config.ffmpeg.path || undefined));
       if (!ffmpeg) throw new Error('FFmpeg not available');
       setFFmpegInfo(ffmpeg);
-      log?.addLog('info', `FFmpeg 已就绪: ${ffmpeg.version} (${ffmpeg.source})`);
+      log?.addLog('info', t('pipeline.ffmpegReadyWithSource', { version: ffmpeg.version, source: ffmpeg.source }));
       if (cancelledRef.current) return;
 
       // 阶段 2: 提取音频
-      updatePipeline({ stage: 'extracting-audio', progress: 0, message: '正在提取音频...' });
-      log?.addLog('info', '开始提取音频...');
+      updatePipeline({ stage: 'extracting-audio', progress: 0, message: t('pipeline.extractingAudio') });
+      log?.addLog('info', t('pipeline.extractingAudio'));
       tempAudioPath = await getTempAudioPath(videoPath);
       await extractAudio(videoPath, tempAudioPath, ffmpeg.path, (payload) => {
-        updatePipeline({ message: `提取音频: ${payload.line.slice(-80)}` });
+        updatePipeline({ message: t('pipeline.extractingLine', { line: payload.line.slice(-80) }) });
       });
-      log?.addLog('info', '音频提取完成');
+      log?.addLog('info', t('pipeline.audioExtracted'));
       if (cancelledRef.current) return;
 
       // 阶段 3: 语音识别
-      updatePipeline({ stage: 'recognizing', progress: 0, message: '正在进行语音识别...' });
-      log?.addLog('info', '开始语音识别...');
+      updatePipeline({ stage: 'recognizing', progress: 0, message: t('pipeline.recognizing') });
+      log?.addLog('info', t('pipeline.recognizing'));
       const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
       const entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
       updatePipeline({ entries, progress: 100 });
-      log?.addLog('info', `语音识别完成，共 ${entries.length} 条字幕`);
+      log?.addLog('info', t('pipeline.recognitionDone', { count: entries.length }));
 
       // 调试模式：保存 ASR 原始 JSON
       if (config.debug.enabled) {
@@ -125,8 +133,8 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       // 阶段 4: 翻译（仅在启用翻译时执行）
       let finalEntries = entries;
       if (config.translation.enabled) {
-        updatePipeline({ stage: 'translating', progress: 0, message: '正在翻译字幕...' });
-        log?.addLog('info', '开始翻译字幕...');
+        updatePipeline({ stage: 'translating', progress: 0, message: t('pipeline.translating') });
+        log?.addLog('info', t('pipeline.translating'));
         const debugEnabled = config.debug.enabled;
         finalEntries = await translateAll(
           entries,
@@ -135,7 +143,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
             const percent = Math.round((completed / total) * 100);
             updatePipeline({
               progress: percent,
-              message: `翻译进度: ${completed}/${total}`,
+              message: tRef.current('pipeline.translationProgress', { completed, total }),
             });
           },
           debugEnabled ? (info) => {
@@ -150,7 +158,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
           // 流式回调
           (batchIndex, totalBatches) => {
             const streamId = `stream_batch_${batchIndex}_${Date.now()}`;
-            log?.addStreamEntry(streamId, `翻译批次 ${batchIndex + 1}/${totalBatches}...`);
+            log?.addStreamEntry(streamId, tRef.current('pipeline.translationBatch', { current: batchIndex + 1, total: totalBatches }));
             return {
               onChunk: (chunk: string) => {
                 log?.appendStream(streamId, chunk);
@@ -162,22 +170,22 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
           }
         );
         updatePipeline({ entries: finalEntries, progress: 100 });
-        log?.addLog('info', '翻译完成');
+        log?.addLog('info', t('pipeline.translationDone'));
         if (cancelledRef.current) return;
       }
 
       // 阶段 5: 导出
-      updatePipeline({ stage: 'exporting', progress: 0, message: '正在导出字幕...' });
+      updatePipeline({ stage: 'exporting', progress: 0, message: t('pipeline.exporting') });
       const isBilingual = config.translation.enabled && config.translation.bilingual;
       const srtContent = generateSRT(finalEntries, isBilingual);
       const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
       await invoke('save_file', { path: srtPath, content: srtContent });
-      updatePipeline({ stage: 'done', progress: 100, message: `字幕已导出: ${srtPath}` });
-      log?.addLog('info', `字幕已导出: ${srtPath}`);
+      updatePipeline({ stage: 'done', progress: 100, message: t('pipeline.exported', { path: srtPath }) });
+      log?.addLog('info', t('pipeline.exported', { path: srtPath }));
     } catch (err) {
       if (!cancelledRef.current) {
         const msg = err instanceof Error ? err.message : String(err);
-        updatePipeline({ stage: 'error', message: `处理失败: ${msg}`, error: msg });
+        updatePipeline({ stage: 'error', message: t('pipeline.processFailed', { error: msg }), error: msg });
         log?.addLog('error', msg);
       }
     } finally {
@@ -190,14 +198,15 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
   const cancelProcessing = useCallback(() => {
     cancelledRef.current = true;
     cleanupTempFiles().catch(console.error);
-    updatePipeline({ stage: 'idle', progress: 0, message: '已取消' });
+    updatePipeline({ stage: 'idle', progress: 0, message: tRef.current('pipeline.cancelled') });
   }, [updatePipeline]);
 
   // 重新翻译（仅翻译阶段）
   const retranslate = useCallback(async () => {
+    const t = tRef.current;
     if (pipeline.entries.length === 0) return;
     if (!config.translation.enabled) {
-      updatePipeline({ stage: 'error', message: '请先启用翻译功能', error: '翻译未启用' });
+      updatePipeline({ stage: 'error', message: t('pipeline.enableTranslationFirst'), error: t('pipeline.translationNotEnabled') });
       return;
     }
 
@@ -206,8 +215,8 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
     log?.clearLogs();
 
     try {
-      updatePipeline({ stage: 'translating', progress: 0, message: '正在重新翻译字幕...', error: undefined });
-      log?.addLog('info', '开始重新翻译字幕...');
+      updatePipeline({ stage: 'translating', progress: 0, message: t('pipeline.retranslating'), error: undefined });
+      log?.addLog('info', t('pipeline.retranslating'));
 
       // 清除旧译文
       const cleanEntries = pipeline.entries.map((e) => ({ ...e, translatedText: '' }));
@@ -218,7 +227,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         config,
         (completed, total) => {
           const percent = Math.round((completed / total) * 100);
-          updatePipeline({ progress: percent, message: `翻译进度: ${completed}/${total}` });
+          updatePipeline({ progress: percent, message: tRef.current('pipeline.translationProgress', { completed, total }) });
         },
         debugEnabled ? (info) => {
           appendLlmDebugLog(
@@ -231,7 +240,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         } : undefined,
         (batchIndex, totalBatches) => {
           const streamId = `stream_batch_${batchIndex}_${Date.now()}`;
-          log?.addStreamEntry(streamId, `翻译批次 ${batchIndex + 1}/${totalBatches}...`);
+          log?.addStreamEntry(streamId, tRef.current('pipeline.translationBatch', { current: batchIndex + 1, total: totalBatches }));
           return {
             onChunk: (chunk: string) => { log?.appendStream(streamId, chunk); },
             onDone: () => { log?.finalizeStream(streamId); },
@@ -240,22 +249,22 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       );
 
       updatePipeline({ entries: finalEntries, progress: 100 });
-      log?.addLog('info', '翻译完成');
+      log?.addLog('info', t('pipeline.translationDone'));
 
       if (cancelledRef.current) return;
 
       // 自动导出
-      updatePipeline({ stage: 'exporting', progress: 0, message: '正在导出字幕...' });
+      updatePipeline({ stage: 'exporting', progress: 0, message: t('pipeline.exporting') });
       const isBilingual = config.translation.bilingual;
       const srtContent = generateSRT(finalEntries, isBilingual);
       const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
       await invoke('save_file', { path: srtPath, content: srtContent });
-      updatePipeline({ stage: 'done', progress: 100, message: `字幕已导出: ${srtPath}` });
-      log?.addLog('info', `字幕已导出: ${srtPath}`);
+      updatePipeline({ stage: 'done', progress: 100, message: t('pipeline.exported', { path: srtPath }) });
+      log?.addLog('info', t('pipeline.exported', { path: srtPath }));
     } catch (err) {
       if (!cancelledRef.current) {
         const msg = err instanceof Error ? err.message : String(err);
-        updatePipeline({ stage: 'error', message: `翻译失败: ${msg}`, error: msg });
+        updatePipeline({ stage: 'error', message: t('pipeline.translationFailed', { error: msg }), error: msg });
         log?.addLog('error', msg);
       }
     }
@@ -263,15 +272,19 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
 
   // 导出到自定义路径
   const exportSRT = useCallback(async (path: string) => {
+    const t = tRef.current;
     try {
       const srtContent = generateSRT(pipeline.entries, config.translation.bilingual);
       await invoke('save_file', { path, content: srtContent });
-      updatePipeline({ message: `字幕已导出: ${path}` });
+      updatePipeline({ message: t('pipeline.exported', { path }) });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      updatePipeline({ stage: 'error', message: `导出失败: ${msg}`, error: msg });
+      updatePipeline({ stage: 'error', message: t('pipeline.exportFailed', { error: msg }), error: msg });
     }
   }, [pipeline.entries, config.translation.bilingual, updatePipeline]);
+
+  const stageKey = STAGE_KEY_MAP[pipeline.stage];
+  const stageLabel = t(`stage.${stageKey}` as keyof import('@/i18n/types').TranslationDict);
 
   return {
     config,
@@ -280,7 +293,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
     ffmpegInfo,
     videoPath,
     setVideoPath,
-    stageLabel: STAGE_LABELS[pipeline.stage],
+    stageLabel,
     isProcessing: !['idle', 'done', 'error'].includes(pipeline.stage),
     startProcessing,
     cancelProcessing,

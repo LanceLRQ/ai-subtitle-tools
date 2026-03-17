@@ -4,6 +4,7 @@ import type { AppConfig } from './types';
 /** 默认配置 */
 export function getDefaultConfig(): AppConfig {
   return {
+    language: 'zh',
     ffmpeg: {
       path: '',
     },
@@ -41,6 +42,7 @@ export async function loadConfig(): Promise<AppConfig> {
 
     // 深度合并，确保新增字段有默认值
     return {
+      language: saved.language ?? defaults.language,
       ffmpeg: { ...defaults.ffmpeg, ...saved.ffmpeg },
       funasr: { ...defaults.funasr, ...saved.funasr },
       llm: { ...defaults.llm, ...saved.llm },

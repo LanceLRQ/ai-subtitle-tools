@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { LogEntry } from '@/lib/types';
+import { useI18n } from '@/i18n';
 
 interface LogPanelProps {
   logs: LogEntry[];
@@ -21,6 +22,7 @@ const levelColors: Record<string, string> = {
 };
 
 export default function LogPanel({ logs }: LogPanelProps) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
 
@@ -42,7 +44,7 @@ export default function LogPanel({ logs }: LogPanelProps) {
   if (logs.length === 0) {
     return (
       <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
-        暂无日志
+        {t('logPanel.empty')}
       </div>
     );
   }

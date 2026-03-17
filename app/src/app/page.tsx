@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePipeline } from '@/hooks/usePipeline';
 import { useLog } from '@/hooks/useLog';
+import { useI18n } from '@/i18n';
 import SettingsPanel from '@/components/SettingsPanel';
 import SettingsModal from '@/components/SettingsModal';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -13,6 +14,7 @@ import LogTabs from '@/components/LogTabs';
 import { save } from '@tauri-apps/plugin-dialog';
 
 export default function Home() {
+  const { t, setLocale } = useI18n();
   const log = useLog();
   const {
     config,
@@ -32,6 +34,11 @@ export default function Home() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'log' | 'preview'>('log');
+
+  // Sync locale from config
+  useEffect(() => {
+    setLocale(config.language);
+  }, [config.language, setLocale]);
 
   // 开始处理时自动切换到日志 tab
   useEffect(() => {
@@ -56,7 +63,7 @@ export default function Home() {
         {/* 工具栏 */}
         <div className="flex items-center justify-end gap-2">
           <ThemeToggle />
-          <Tooltip content="设置">
+          <Tooltip content={t('app.settingsTooltip')}>
             <button
               onClick={() => setSettingsOpen(true)}
               className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -96,14 +103,14 @@ export default function Home() {
               disabled={!videoPath}
               className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
             >
-              开始生成字幕
+              {t('app.startButton')}
             </button>
           ) : (
             <button
               onClick={cancelProcessing}
               className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
             >
-              取消
+              {t('app.cancelButton')}
             </button>
           )}
 
@@ -114,13 +121,13 @@ export default function Home() {
                 disabled={!config.translation.enabled}
                 className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
               >
-                重新翻译
+                {t('app.retranslateButton')}
               </button>
               <button
                 onClick={handleExport}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
               >
-                另存为...
+                {t('app.saveAsButton')}
               </button>
             </>
           )}

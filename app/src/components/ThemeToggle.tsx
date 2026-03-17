@@ -3,16 +3,19 @@
 import { useTheme } from '@/hooks/useTheme';
 import type { ThemeMode } from '@/hooks/useTheme';
 import Tooltip from '@/components/Tooltip';
+import { useI18n } from '@/i18n';
+import type { TranslationDict } from '@/i18n/types';
 
 const CYCLE: ThemeMode[] = ['system', 'light', 'dark'];
-const MODE_LABEL: Record<ThemeMode, string> = {
-  system: '跟随系统',
-  light: '亮色模式',
-  dark: '暗色模式',
+const MODE_KEY: Record<ThemeMode, keyof TranslationDict> = {
+  system: 'theme.system',
+  light: 'theme.light',
+  dark: 'theme.dark',
 };
 
 export default function ThemeToggle() {
   const { mode, setMode } = useTheme();
+  const { t } = useI18n();
 
   const handleClick = () => {
     const idx = CYCLE.indexOf(mode);
@@ -20,7 +23,7 @@ export default function ThemeToggle() {
   };
 
   return (
-    <Tooltip content={MODE_LABEL[mode]}>
+    <Tooltip content={t(MODE_KEY[mode])}>
       <button
         onClick={handleClick}
         className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

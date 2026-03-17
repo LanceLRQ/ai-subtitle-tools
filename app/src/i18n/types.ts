@@ -1,0 +1,106 @@
+export type Locale = 'zh' | 'en';
+
+export interface TranslationDict {
+  // App
+  'app.title': string;
+  'app.description': string;
+  'app.startButton': string;
+  'app.cancelButton': string;
+  'app.retranslateButton': string;
+  'app.saveAsButton': string;
+  'app.settingsTooltip': string;
+
+  // Stage labels
+  'stage.idle': string;
+  'stage.detectingFfmpeg': string;
+  'stage.extractingAudio': string;
+  'stage.recognizing': string;
+  'stage.translating': string;
+  'stage.exporting': string;
+  'stage.done': string;
+  'stage.error': string;
+
+  // Pipeline messages
+  'pipeline.detectingFfmpeg': string;
+  'pipeline.ffmpegReady': string;
+  'pipeline.ffmpegReadyWithSource': string;
+  'pipeline.ffmpegFailed': string;
+  'pipeline.extractingAudio': string;
+  'pipeline.extractingLine': string;
+  'pipeline.audioExtracted': string;
+  'pipeline.recognizing': string;
+  'pipeline.recognitionDone': string;
+  'pipeline.translating': string;
+  'pipeline.retranslating': string;
+  'pipeline.translationProgress': string;
+  'pipeline.translationBatch': string;
+  'pipeline.translationDone': string;
+  'pipeline.exporting': string;
+  'pipeline.exported': string;
+  'pipeline.processFailed': string;
+  'pipeline.translationFailed': string;
+  'pipeline.exportFailed': string;
+  'pipeline.selectVideoFirst': string;
+  'pipeline.noVideoSelected': string;
+  'pipeline.enableTranslationFirst': string;
+  'pipeline.translationNotEnabled': string;
+  'pipeline.cancelled': string;
+
+  // Settings panel
+  'settings.language.label': string;
+  'settings.ffmpeg.legend': string;
+  'settings.ffmpeg.pathPlaceholder': string;
+  'settings.ffmpeg.detect': string;
+  'settings.ffmpeg.sourceConfig': string;
+  'settings.ffmpeg.sourceLocal': string;
+  'settings.ffmpeg.sourceSystem': string;
+  'settings.funasr.legend': string;
+  'settings.funasr.apiKeyPlaceholder': string;
+  'settings.funasr.modelPlaceholder': string;
+  'settings.llm.legend': string;
+  'settings.llm.testConnection': string;
+  'settings.llm.testing': string;
+  'settings.llm.success': string;
+  'settings.llm.thinkingTagFiltered': string;
+  'settings.llm.modelPlaceholder': string;
+  'settings.translation.legend': string;
+  'settings.translation.enabled': string;
+  'settings.translation.bilingual': string;
+  'settings.translation.targetLanguage': string;
+  'settings.translation.targetPlaceholder': string;
+  'settings.translation.batchSize': string;
+  'settings.subtitle.legend': string;
+  'settings.subtitle.maxCharsPerLine': string;
+  'settings.subtitle.maxCharsHint': string;
+  'settings.debug.legend': string;
+  'settings.debug.enabled': string;
+  'settings.debug.hint': string;
+
+  // Settings modal
+  'settingsModal.title': string;
+
+  // File picker
+  'filePicker.selectVideo': string;
+  'filePicker.supportedFormats': string;
+
+  // Subtitle preview
+  'subtitlePreview.empty': string;
+  'subtitlePreview.index': string;
+  'subtitlePreview.time': string;
+  'subtitlePreview.original': string;
+  'subtitlePreview.translated': string;
+  'subtitlePreview.speaker': string;
+
+  // Log panel
+  'logPanel.empty': string;
+
+  // Log tabs
+  'logTabs.log': string;
+  'logTabs.preview': string;
+  'logTabs.previewCount': string;
+
+  // Theme toggle
+  'theme.system': string;
+  'theme.light': string;
+  'theme.dark': string;
+}

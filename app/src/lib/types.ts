@@ -1,5 +1,6 @@
 /** 应用配置 */
 export interface AppConfig {
+  language: 'zh' | 'en';
   ffmpeg: {
     path: string;
   };

@@ -1,6 +1,7 @@
 'use client';
 
 import { open } from '@tauri-apps/plugin-dialog';
+import { useI18n } from '@/i18n';
 
 interface FilePickerProps {
   videoPath: string;
@@ -11,6 +12,8 @@ interface FilePickerProps {
 const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'flv', 'wmv', 'webm'];
 
 export default function FilePicker({ videoPath, onSelect, disabled }: FilePickerProps) {
+  const { t } = useI18n();
+
   const handleClick = async () => {
     try {
       const selected = await open({
@@ -41,7 +44,7 @@ export default function FilePicker({ videoPath, onSelect, disabled }: FilePicker
         disabled={disabled}
         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
       >
-        选择视频文件
+        {t('filePicker.selectVideo')}
       </button>
       {videoPath ? (
         <div className="flex-1 min-w-0">
@@ -51,7 +54,7 @@ export default function FilePicker({ videoPath, onSelect, disabled }: FilePicker
           <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{videoPath}</p>
         </div>
       ) : (
-        <p className="text-sm text-gray-400 dark:text-gray-500">支持 {VIDEO_EXTENSIONS.join(', ')} 格式</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500">{t('filePicker.supportedFormats', { formats: VIDEO_EXTENSIONS.join(', ') })}</p>
       )}
     </div>
   );

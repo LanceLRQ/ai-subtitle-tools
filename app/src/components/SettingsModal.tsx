@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { useI18n } from '@/i18n';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ isOpen, onClose, children }: SettingsModalProps) {
+  const { t } = useI18n();
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -37,7 +40,7 @@ export default function SettingsModal({ isOpen, onClose, children }: SettingsMod
       >
         {/* 标题栏 - 固定 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">设置</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('settingsModal.title')}</h2>
           <button
             onClick={onClose}
             className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

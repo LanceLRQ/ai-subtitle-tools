@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { AppConfig, FFmpegDetectResult } from '@/lib/types';
 import { testLLMConnection } from '@/lib/translator';
+import { useI18n } from '@/i18n';
+import type { Locale } from '@/i18n';
 
 interface SettingsPanelProps {
   config: AppConfig;
@@ -129,6 +131,7 @@ export default function SettingsPanel({
   onConfigChange,
   onDetectFFmpeg,
 }: SettingsPanelProps) {
+  const { t } = useI18n();
   const [llmTestState, setLlmTestState] = useState<{
     status: 'idle' | 'testing' | 'success' | 'error';
     message: string;
@@ -136,7 +139,7 @@ export default function SettingsPanel({
   }>({ status: 'idle', message: '' });
 
   const handleTestLLM = useCallback(async () => {
-    setLlmTestState({ status: 'testing', message: '测试中...' });
+    setLlmTestState({ status: 'testing', message: t('settings.llm.testing') });
     try {
       const result = await testLLMConnection(config.llm);
       setLlmTestState({ status: 'success', message: result.reply, hadThinkingTags: result.hadThinkingTags });
@@ -144,21 +147,30 @@ export default function SettingsPanel({
       const msg = err instanceof Error ? err.message : String(err);
       setLlmTestState({ status: 'error', message: msg });
     }
-  }, [config.llm]);
+  }, [config.llm, t]);
 
   const update = <K extends keyof AppConfig>(
     section: K,
     key: string,
     value: string | number | boolean
   ) => {
-    const newConfig = {
-      ...config,
-      [section]: {
-        ...config[section],
-        [key]: value,
-      },
-    };
-    onConfigChange(newConfig);
+    const sectionValue = config[section];
+    if (typeof sectionValue === 'object' && sectionValue !== null) {
+      const newConfig = {
+        ...config,
+        [section]: {
+          ...sectionValue,
+          [key]: value,
+        },
+      };
+      onConfigChange(newConfig);
+    }
+  };
+
+  const ffmpegSourceLabel = (source: string) => {
+    if (source === 'config') return t('settings.ffmpeg.sourceConfig');
+    if (source === 'local') return t('settings.ffmpeg.sourceLocal');
+    return t('settings.ffmpeg.sourceSystem');
   };
 
   // 当前语言的注释
@@ -168,34 +180,47 @@ export default function SettingsPanel({
 
   return (
     <div className="space-y-4">
+      {/* 语言选择 */}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.language.label')}</legend>
+        <select
+          value={config.language}
+          onChange={(e) => onConfigChange({ ...config, language: e.target.value as Locale })}
+          className="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200"
+        >
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+      </fieldset>
+
       {/* FFmpeg */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">FFmpeg</legend>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.ffmpeg.legend')}</legend>
         <div className="flex gap-2">
           <input
             type="text"
             value={config.ffmpeg.path}
             onChange={(e) => update('ffmpeg', 'path', e.target.value)}
-            placeholder="FFmpeg 路径（留空自动检测）"
+            placeholder={t('settings.ffmpeg.pathPlaceholder')}
             className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
           <button
             onClick={onDetectFFmpeg}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
           >
-            检测
+            {t('settings.ffmpeg.detect')}
           </button>
         </div>
         {ffmpegInfo && (
           <p className="text-xs text-green-400">
-            {ffmpegInfo.version} ({ffmpegInfo.source === 'config' ? '用户配置' : ffmpegInfo.source === 'local' ? '本地目录' : '系统 PATH'})
+            {ffmpegInfo.version} ({ffmpegSourceLabel(ffmpegInfo.source)})
           </p>
         )}
       </fieldset>
 
       {/* FunASR */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">FunASR 语音识别</legend>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.funasr.legend')}</legend>
         <input
           type="text"
           value={config.funasr.url}
@@ -208,14 +233,14 @@ export default function SettingsPanel({
             type="password"
             value={config.funasr.apiKey}
             onChange={(e) => update('funasr', 'apiKey', e.target.value)}
-            placeholder="API Key（可选）"
+            placeholder={t('settings.funasr.apiKeyPlaceholder')}
             className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
           <ComboBox
             value={config.funasr.model}
             onChange={(v) => update('funasr', 'model', v)}
             options={ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
-            placeholder="模型"
+            placeholder={t('settings.funasr.modelPlaceholder')}
             className="w-52"
           />
         </div>
@@ -224,21 +249,21 @@ export default function SettingsPanel({
       {/* LLM */}
       <fieldset className="space-y-2">
         <div className="flex items-center justify-between">
-          <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">LLM 翻译</legend>
+          <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.llm.legend')}</legend>
           <div className="flex items-center gap-2">
             <button
               onClick={handleTestLLM}
               disabled={llmTestState.status === 'testing'}
               className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:no-underline disabled:cursor-not-allowed transition-colors"
             >
-              {llmTestState.status === 'testing' ? '测试中...' : '测试连接'}
+              {llmTestState.status === 'testing' ? t('settings.llm.testing') : t('settings.llm.testConnection')}
             </button>
             {llmTestState.status === 'success' && (
               <span
                 className="text-xs text-green-400 flex items-center gap-1 cursor-default"
-                title={llmTestState.message + (llmTestState.hadThinkingTags ? '\n(<think> 标签已自动过滤)' : '')}
+                title={llmTestState.message + (llmTestState.hadThinkingTags ? '\n' + t('settings.llm.thinkingTagFiltered') : '')}
               >
-                成功✅
+                {t('settings.llm.success')}
               </span>
             )}
             {llmTestState.status === 'error' && (
@@ -267,7 +292,7 @@ export default function SettingsPanel({
             type="text"
             value={config.llm.model}
             onChange={(e) => update('llm', 'model', e.target.value)}
-            placeholder="模型"
+            placeholder={t('settings.llm.modelPlaceholder')}
             className="w-52 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
@@ -275,22 +300,22 @@ export default function SettingsPanel({
 
       {/* 翻译设置 */}
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">翻译设置</legend>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.translation.legend')}</legend>
         <div className="flex items-center gap-6">
           <Toggle
             checked={config.translation.enabled}
             onChange={(v) => update('translation', 'enabled', v)}
-            label="启用翻译"
+            label={t('settings.translation.enabled')}
           />
           <Toggle
             checked={config.translation.bilingual}
             onChange={(v) => update('translation', 'bilingual', v)}
-            label="双语字幕"
+            label={t('settings.translation.bilingual')}
           />
         </div>
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500 dark:text-gray-400">目标语言</label>
+            <label className="text-sm text-gray-500 dark:text-gray-400">{t('settings.translation.targetLanguage')}</label>
             <ComboBox
               value={config.translation.targetLanguage}
               onChange={(v) => update('translation', 'targetLanguage', v)}
@@ -299,7 +324,7 @@ export default function SettingsPanel({
                 label: l.value,
                 annotation: l.annotation,
               }))}
-              placeholder="输入或选择语言"
+              placeholder={t('settings.translation.targetPlaceholder')}
               disabled={!config.translation.enabled}
               className="w-40"
             />
@@ -308,7 +333,7 @@ export default function SettingsPanel({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500 dark:text-gray-400">每批数量</label>
+            <label className="text-sm text-gray-500 dark:text-gray-400">{t('settings.translation.batchSize')}</label>
             <input
               type="number"
               value={config.translation.batchSize}
@@ -324,9 +349,9 @@ export default function SettingsPanel({
 
       {/* 字幕设置 */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">字幕设置</legend>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.subtitle.legend')}</legend>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500 dark:text-gray-400">每行最大字符数</label>
+          <label className="text-sm text-gray-500 dark:text-gray-400">{t('settings.subtitle.maxCharsPerLine')}</label>
           <input
             type="number"
             value={config.subtitle.maxCharsPerLine}
@@ -336,22 +361,22 @@ export default function SettingsPanel({
             className="w-20 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200"
           />
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            ASR 长文本将按标点拆分并合并为不超过此长度的字幕行
+            {t('settings.subtitle.maxCharsHint')}
           </span>
         </div>
       </fieldset>
 
       {/* 调试 */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">调试</legend>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.debug.legend')}</legend>
         <div className="flex items-center gap-2">
           <Toggle
             checked={config.debug.enabled}
             onChange={(v) => update('debug', 'enabled', v)}
-            label="调试模式"
+            label={t('settings.debug.enabled')}
           />
           <span className="text-xs text-gray-400 dark:text-gray-500">
-            开启后将 ASR 原始 JSON 和 LLM 请求日志保存到视频所在目录
+            {t('settings.debug.hint')}
           </span>
         </div>
       </fieldset>

@@ -2,16 +2,19 @@
 
 import type { SubtitleEntry } from '@/lib/types';
 import { formatTimestamp } from '@/lib/subtitle';
+import { useI18n } from '@/i18n';
 
 interface SubtitlePreviewProps {
   entries: SubtitleEntry[];
 }
 
 export default function SubtitlePreview({ entries }: SubtitlePreviewProps) {
+  const { t } = useI18n();
+
   if (entries.length === 0) {
     return (
       <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
-        暂无字幕数据
+        {t('subtitlePreview.empty')}
       </div>
     );
   }
@@ -21,11 +24,11 @@ export default function SubtitlePreview({ entries }: SubtitlePreviewProps) {
       <table className="w-full text-sm">
         <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0">
           <tr className="text-gray-500 dark:text-gray-400 text-left">
-            <th className="px-3 py-2 w-12">#</th>
-            <th className="px-3 py-2 w-48">时间</th>
-            <th className="px-3 py-2">原文</th>
-            <th className="px-3 py-2">译文</th>
-            <th className="px-3 py-2 w-24">说话人</th>
+            <th className="px-3 py-2 w-12">{t('subtitlePreview.index')}</th>
+            <th className="px-3 py-2 w-48">{t('subtitlePreview.time')}</th>
+            <th className="px-3 py-2">{t('subtitlePreview.original')}</th>
+            <th className="px-3 py-2">{t('subtitlePreview.translated')}</th>
+            <th className="px-3 py-2 w-24">{t('subtitlePreview.speaker')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
