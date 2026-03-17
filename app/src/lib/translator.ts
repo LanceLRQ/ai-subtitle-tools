@@ -131,7 +131,7 @@ async function translateBatch(
 ): Promise<TranslateBatchResult> {
   const numberedTexts = texts.map((t, i) => `${i + 1}. ${t}`).join('\n');
   const userPrompt =
-    `请将下列字幕内容翻译成${targetLanguage}，每行一条，保持原序，仅返回翻译结果（每行格式为"序号. 译文"）：\n${numberedTexts}`;
+    `Translate the following subtitle lines into ${targetLanguage}. One line per entry, keep the original order, return only the translations (each line formatted as "number. translation"):\n${numberedTexts}`;
 
   const url = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
   const body: Record<string, unknown> = {
