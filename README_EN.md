@@ -4,6 +4,8 @@
 
 A cross-platform desktop tool for automated video subtitle generation and translation. Extracts audio via FFmpeg, performs speech recognition through FunASR API, translates with LLM, and exports bilingual SRT subtitle files.
 
+![Preview](docs/ScreenShot_en.png)
+
 ## Features
 
 - **Speech Recognition** — FunASR API integration, supporting Qwen3-ASR, Paraformer and more

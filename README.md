@@ -4,6 +4,8 @@
 
 跨平台的视频字幕自动生成与翻译工具。通过 FFmpeg 提取音频、调用 FunASR API服务进行语音识别、调用 LLM 进行翻译，最终导出双语 SRT 字幕文件。
 
+![预览](docs/ScreenShot_zh.jpg)
+
 ## 功能特性
 
 - **语音识别** — 接入 FunASR API，支持 Qwen3-ASR、Paraformer 等模型
