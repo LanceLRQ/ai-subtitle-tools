@@ -37,6 +37,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
   const [ffmpegInfo, setFFmpegInfo] = useState<FFmpegDetectResult | null>(null);
   const [videoPath, setVideoPath] = useState<string>('');
   const cancelledRef = useRef(false);
+  const asrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef(logCallbacks);
   logRef.current = logCallbacks;
 
@@ -71,7 +72,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       updatePipeline({ stage: 'detecting-ffmpeg', progress: 0, message: t('pipeline.detectingFfmpeg') });
       const result = await detectFFmpeg(config.ffmpeg.path || undefined);
       setFFmpegInfo(result);
-      updatePipeline({ stage: 'idle', progress: 0, message: t('pipeline.ffmpegReady', { version: result.version }) });
+      updatePipeline({ stage: 'idle', progress: 2.5, message: t('pipeline.ffmpegReady', { version: result.version }) });
       return result;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -103,25 +104,38 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       const ffmpeg = ffmpegInfo || (await detectFFmpeg(config.ffmpeg.path || undefined));
       if (!ffmpeg) throw new Error('FFmpeg not available');
       setFFmpegInfo(ffmpeg);
+      updatePipeline({ progress: 2.5 });
       log?.addLog('info', t('pipeline.ffmpegReadyWithSource', { version: ffmpeg.version, source: ffmpeg.source }));
       if (cancelledRef.current) return;
 
       // 阶段 2: 提取音频
-      updatePipeline({ stage: 'extracting-audio', progress: 0, message: t('pipeline.extractingAudio') });
+      updatePipeline({ stage: 'extracting-audio', progress: 2.5, message: t('pipeline.extractingAudio') });
       log?.addLog('info', t('pipeline.extractingAudio'));
       tempAudioPath = await getTempAudioPath(videoPath);
       await extractAudio(videoPath, tempAudioPath, ffmpeg.path, (payload) => {
         updatePipeline({ message: t('pipeline.extractingLine', { line: payload.line.slice(-80) }) });
       });
+      updatePipeline({ progress: 5 });
       log?.addLog('info', t('pipeline.audioExtracted'));
       if (cancelledRef.current) return;
 
-      // 阶段 3: 语音识别
-      updatePipeline({ stage: 'recognizing', progress: 0, message: t('pipeline.recognizing') });
+      // 阶段 3: 语音识别（双曲线假进度）
+      updatePipeline({ stage: 'recognizing', progress: 5, message: t('pipeline.recognizing') });
       log?.addLog('info', t('pipeline.recognizing'));
+      const asrStartTime = Date.now();
+      const K = 30;
+      asrTimerRef.current = setInterval(() => {
+        const t = (Date.now() - asrStartTime) / 1000;
+        const fakeProgress = Math.round(5 + 50 * t / (t + K));
+        updatePipeline({ progress: fakeProgress });
+      }, 1000);
       const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
+      if (asrTimerRef.current) {
+        clearInterval(asrTimerRef.current);
+        asrTimerRef.current = null;
+      }
       const entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
-      updatePipeline({ entries, progress: 100 });
+      updatePipeline({ entries, progress: 55 });
       log?.addLog('info', t('pipeline.recognitionDone', { count: entries.length }));
 
       // 调试模式：保存 ASR 原始 JSON
@@ -133,14 +147,14 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       // 阶段 4: 翻译（仅在启用翻译时执行）
       let finalEntries = entries;
       if (config.translation.enabled) {
-        updatePipeline({ stage: 'translating', progress: 0, message: t('pipeline.translating') });
+        updatePipeline({ stage: 'translating', progress: 55, message: t('pipeline.translating') });
         log?.addLog('info', t('pipeline.translating'));
         const debugEnabled = config.debug.enabled;
         finalEntries = await translateAll(
           entries,
           config,
           (completed, total) => {
-            const percent = Math.round((completed / total) * 100);
+            const percent = Math.round(55 + 40 * (completed / total));
             updatePipeline({
               progress: percent,
               message: tRef.current('pipeline.translationProgress', { completed, total }),
@@ -169,13 +183,13 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
             };
           }
         );
-        updatePipeline({ entries: finalEntries, progress: 100 });
+        updatePipeline({ entries: finalEntries, progress: 95 });
         log?.addLog('info', t('pipeline.translationDone'));
         if (cancelledRef.current) return;
       }
 
       // 阶段 5: 导出
-      updatePipeline({ stage: 'exporting', progress: 0, message: t('pipeline.exporting') });
+      updatePipeline({ stage: 'exporting', progress: 95, message: t('pipeline.exporting') });
       const isBilingual = config.translation.enabled && config.translation.bilingual;
       const srtContent = generateSRT(finalEntries, isBilingual);
       const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
@@ -189,6 +203,11 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         log?.addLog('error', msg);
       }
     } finally {
+      // 清理 ASR 假进度定时器
+      if (asrTimerRef.current) {
+        clearInterval(asrTimerRef.current);
+        asrTimerRef.current = null;
+      }
       // 清理临时文件
       cleanupTempFiles().catch(console.error);
     }
@@ -197,6 +216,10 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
   // 取消处理
   const cancelProcessing = useCallback(() => {
     cancelledRef.current = true;
+    if (asrTimerRef.current) {
+      clearInterval(asrTimerRef.current);
+      asrTimerRef.current = null;
+    }
     cleanupTempFiles().catch(console.error);
     updatePipeline({ stage: 'idle', progress: 0, message: tRef.current('pipeline.cancelled') });
   }, [updatePipeline]);
@@ -226,7 +249,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         cleanEntries,
         config,
         (completed, total) => {
-          const percent = Math.round((completed / total) * 100);
+          const percent = Math.round(95 * (completed / total));
           updatePipeline({ progress: percent, message: tRef.current('pipeline.translationProgress', { completed, total }) });
         },
         debugEnabled ? (info) => {
@@ -248,13 +271,13 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         }
       );
 
-      updatePipeline({ entries: finalEntries, progress: 100 });
+      updatePipeline({ entries: finalEntries, progress: 95 });
       log?.addLog('info', t('pipeline.translationDone'));
 
       if (cancelledRef.current) return;
 
       // 自动导出
-      updatePipeline({ stage: 'exporting', progress: 0, message: t('pipeline.exporting') });
+      updatePipeline({ stage: 'exporting', progress: 95, message: t('pipeline.exporting') });
       const isBilingual = config.translation.bilingual;
       const srtContent = generateSRT(finalEntries, isBilingual);
       const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');

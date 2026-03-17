@@ -20,7 +20,7 @@ export default function SubtitlePreview({ entries }: SubtitlePreviewProps) {
   }
 
   return (
-    <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+    <div className="max-h-72 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
       <table className="w-full text-sm">
         <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0">
           <tr className="text-gray-500 dark:text-gray-400 text-left">

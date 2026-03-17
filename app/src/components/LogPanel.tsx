@@ -53,7 +53,7 @@ export default function LogPanel({ logs }: LogPanelProps) {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1 bg-white dark:bg-gray-800 font-mono text-xs"
+      className="max-h-72 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1 bg-white dark:bg-gray-800 font-mono text-xs"
     >
       {logs.map((log) => (
         <div key={log.id}>

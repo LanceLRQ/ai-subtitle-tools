@@ -34,7 +34,7 @@ export default function ProgressBar({ stage, progress, message, stageLabel }: Pr
       <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-300 ${color}`}
-          style={{ width: `${Math.max(progress, stage === 'done' || stage === 'error' ? 100 : 5)}%` }}
+          style={{ width: `${stage === 'done' || stage === 'error' ? 100 : progress}%` }}
         />
       </div>
       {message && (
