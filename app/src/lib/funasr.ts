@@ -17,9 +17,8 @@ export async function recognizeSpeech(
   audioFilePath: string,
   config: AppConfig['funasr']
 ): Promise<AsrResult> {
-  // 读取音频文件二进制
-  const audioBytes = await invoke<number[]>('read_file_bytes', { path: audioFilePath });
-  const audioData = new Uint8Array(audioBytes);
+  // 读取音频文件二进制（Rust 侧通过 tauri::ipc::Response 返回原始字节）
+  const audioData = new Uint8Array(await invoke<ArrayBuffer>('read_file_bytes', { path: audioFilePath }));
 
   // 构造 multipart/form-data
   const formData = new FormData();
