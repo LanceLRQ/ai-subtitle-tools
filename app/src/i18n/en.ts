@@ -92,6 +92,12 @@ const en: TranslationDict = {
   'settings.storage.cleared': 'Cleared',
   'settings.storage.clearCacheConfirm': 'Clear all ASR recognition cache? Next recognition will re-request the ASR service.',
   'settings.storage.clearTempConfirm': 'Clear all temporary files?',
+  'settings.storage.viewCache': 'View',
+  'settings.storage.cacheList': 'ASR Cache List',
+  'settings.storage.cacheEmpty': 'No cache entries',
+  'settings.storage.cacheVideoPath': 'Video Path',
+  'settings.storage.cacheDataSize': 'Data Size',
+  'settings.storage.cacheDeleteConfirm': 'Delete this cache entry?',
 
   // Settings modal
   'settingsModal.title': 'Settings',

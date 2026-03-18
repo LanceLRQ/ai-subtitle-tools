@@ -92,6 +92,12 @@ export interface TranslationDict {
   'settings.storage.cleared': string;
   'settings.storage.clearCacheConfirm': string;
   'settings.storage.clearTempConfirm': string;
+  'settings.storage.viewCache': string;
+  'settings.storage.cacheList': string;
+  'settings.storage.cacheEmpty': string;
+  'settings.storage.cacheVideoPath': string;
+  'settings.storage.cacheDataSize': string;
+  'settings.storage.cacheDeleteConfirm': string;
 
   // Settings modal
   'settingsModal.title': string;

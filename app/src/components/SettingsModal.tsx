@@ -32,11 +32,9 @@ export default function SettingsModal({ isOpen, onClose, children }: SettingsMod
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
     >
       <div
         className="relative flex flex-col w-full max-w-2xl max-h-[80vh] mx-4 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 - 固定 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">

@@ -1,4 +1,4 @@
-use redb::{Database, TableDefinition};
+use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
@@ -85,6 +85,72 @@ pub fn clear_asr_cache(app: AppHandle) -> Result<(), String> {
         std::fs::remove_file(&path)
             .map_err(|e| format!("Failed to delete cache file: {}", e))?;
     }
+    Ok(())
+}
+
+/// 缓存条目信息
+#[derive(Clone, serde::Serialize)]
+pub struct AsrCacheEntry {
+    pub video_path: String,
+    pub data_size: usize,
+}
+
+/// 分页查询结果
+#[derive(Clone, serde::Serialize)]
+pub struct AsrCacheListResult {
+    pub entries: Vec<AsrCacheEntry>,
+    pub total: usize,
+}
+
+/// 列出 ASR 缓存条目（分页）
+#[tauri::command]
+pub fn list_asr_cache(app: AppHandle, offset: usize, limit: usize) -> Result<AsrCacheListResult, String> {
+    let db = open_db(&app)?;
+    let txn = db
+        .begin_read()
+        .map_err(|e| format!("Failed to begin read transaction: {}", e))?;
+    let table = match txn.open_table(TABLE) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(AsrCacheListResult { entries: vec![], total: 0 }),
+        Err(e) => return Err(format!("Failed to open cache table: {}", e)),
+    };
+
+    let total = table.len()
+        .map_err(|e| format!("Failed to get table length: {}", e))? as usize;
+
+    let mut entries = Vec::new();
+    let iter = table
+        .iter()
+        .map_err(|e| format!("Failed to iterate cache: {}", e))?;
+    for (i, item) in iter.enumerate() {
+        if i < offset { continue; }
+        if entries.len() >= limit { break; }
+        let (key, value) = item.map_err(|e| format!("Failed to read entry: {}", e))?;
+        entries.push(AsrCacheEntry {
+            video_path: key.value().to_string(),
+            data_size: value.value().len(),
+        });
+    }
+    Ok(AsrCacheListResult { entries, total })
+}
+
+/// 删除单条 ASR 缓存
+#[tauri::command]
+pub fn delete_asr_cache_entry(app: AppHandle, video_path: String) -> Result<(), String> {
+    let db = open_db(&app)?;
+    let txn = db
+        .begin_write()
+        .map_err(|e| format!("Failed to begin write transaction: {}", e))?;
+    {
+        let mut table = txn
+            .open_table(TABLE)
+            .map_err(|e| format!("Failed to open cache table: {}", e))?;
+        table
+            .remove(video_path.as_str())
+            .map_err(|e| format!("Failed to delete cache entry: {}", e))?;
+    }
+    txn.commit()
+        .map_err(|e| format!("Failed to commit: {}", e))?;
     Ok(())
 }
 

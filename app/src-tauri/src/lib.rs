@@ -34,6 +34,8 @@ pub fn run() {
             asr_cache::write_asr_cache,
             asr_cache::get_asr_cache_size,
             asr_cache::clear_asr_cache,
+            asr_cache::list_asr_cache,
+            asr_cache::delete_asr_cache_entry,
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {

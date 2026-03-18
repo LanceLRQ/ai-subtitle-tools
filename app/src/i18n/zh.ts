@@ -92,6 +92,12 @@ const zh: TranslationDict = {
   'settings.storage.cleared': '已清理',
   'settings.storage.clearCacheConfirm': '确定清理所有 ASR 识别缓存？清理后下次识别将重新请求 ASR 服务。',
   'settings.storage.clearTempConfirm': '确定清理所有临时文件？',
+  'settings.storage.viewCache': '查看',
+  'settings.storage.cacheList': 'ASR 缓存列表',
+  'settings.storage.cacheEmpty': '暂无缓存记录',
+  'settings.storage.cacheVideoPath': '视频路径',
+  'settings.storage.cacheDataSize': '数据大小',
+  'settings.storage.cacheDeleteConfirm': '确定删除该条缓存记录？',
 
   // Settings modal
   'settingsModal.title': '设置',

@@ -7,6 +7,7 @@ import type { AppConfig, FFmpegDetectResult } from '@/lib/types';
 import { testLLMConnection } from '@/lib/translator';
 import { useI18n } from '@/i18n';
 import type { Locale } from '@/i18n';
+import AsrCacheModal from './AsrCacheModal';
 
 /** 格式化文件大小 */
 function formatSize(bytes: number): string {
@@ -159,6 +160,7 @@ export default function SettingsPanel({
     configSize: number;
     configDir: string;
   } | null>(null);
+  const [cacheModalOpen, setCacheModalOpen] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [clearingTemp, setClearingTemp] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
@@ -479,13 +481,22 @@ export default function SettingsPanel({
                 {storageInfo ? formatSize(storageInfo.cacheSize) : '...'}
               </span>
             </div>
-            <button
-              onClick={handleClearCache}
-              disabled={clearingCache || (storageInfo?.cacheSize === 0)}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-            >
-              {clearingCache ? t('settings.storage.clearing') : cacheCleared ? t('settings.storage.cleared') : t('settings.storage.clear')}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCacheModalOpen(true)}
+                disabled={storageInfo?.cacheSize === 0}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('settings.storage.viewCache')}
+              </button>
+              <button
+                onClick={handleClearCache}
+                disabled={clearingCache || (storageInfo?.cacheSize === 0)}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                {clearingCache ? t('settings.storage.clearing') : cacheCleared ? t('settings.storage.cleared') : t('settings.storage.clear')}
+              </button>
+            </div>
           </div>
 
           {/* 临时文件 */}
@@ -522,6 +533,13 @@ export default function SettingsPanel({
           </div>
         </div>
       </fieldset>
+
+      {/* ASR 缓存列表弹层 */}
+      <AsrCacheModal
+        isOpen={cacheModalOpen}
+        onClose={() => setCacheModalOpen(false)}
+        onChanged={refreshStorageInfo}
+      />
     </div>
   );
 }
