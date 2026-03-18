@@ -74,6 +74,12 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       updatePipeline({ stage: 'detecting-ffmpeg', progress: 0, message: t('pipeline.detectingFfmpeg') });
       const result = await detectFFmpeg(config.ffmpeg.path || undefined);
       setFFmpegInfo(result);
+      // 本地搜索到的 ffmpeg 自动保存路径到配置
+      if (result.source === 'local' && result.path !== config.ffmpeg.path) {
+        const newConfig = { ...config, ffmpeg: { ...config.ffmpeg, path: result.path } };
+        setConfig(newConfig);
+        saveConfig(newConfig).catch(console.error);
+      }
       updatePipeline({ stage: 'idle', progress: 2.5, message: t('pipeline.ffmpegReady', { version: result.version }) });
       return result;
     } catch (err) {
@@ -82,7 +88,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       updatePipeline({ stage: 'error', message: t('pipeline.ffmpegFailed', { error: msg }), error: msg });
       return null;
     }
-  }, [config.ffmpeg.path, updatePipeline]);
+  }, [config, updatePipeline]);
 
   // 开始处理流水线
   const startProcessing = useCallback(async () => {

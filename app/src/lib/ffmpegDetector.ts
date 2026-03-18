@@ -24,30 +24,17 @@ async function getCwd(): Promise<string> {
 }
 
 /**
- * 在指定目录中检测 ffmpeg，返回检测结果或 null
+ * 在指定目录及其子目录中搜索 ffmpeg 可执行文件
  */
-async function tryDetectInDir(dir: string, source: FFmpegDetectResult['source']): Promise<FFmpegDetectResult | null> {
-  const candidates = [
-    `${dir}/ffmpeg`,
-    `${dir}/ffmpeg.exe`,
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      const version = await checkFFmpeg(candidate);
-      return { path: candidate, version, source };
-    } catch {
-      // 继续尝试下一个
-    }
-  }
-  return null;
+async function searchFFmpegInDir(dir: string): Promise<string | null> {
+  return invoke<string | null>('search_ffmpeg_in_dir', { dir });
 }
 
 /**
  * 四级优先级检测 FFmpeg
  * 1. 用户配置路径
- * 2. 程序目录下的 ffmpeg
- * 3. 当前工作目录下的 ffmpeg
+ * 2. 程序资源目录及其子目录中搜索 ffmpeg
+ * 3. 当前工作目录及其子目录中搜索 ffmpeg
  * 4. 系统 PATH
  */
 export async function detectFFmpeg(configPath?: string): Promise<FFmpegDetectResult> {
@@ -61,22 +48,28 @@ export async function detectFFmpeg(configPath?: string): Promise<FFmpegDetectRes
     }
   }
 
-  // 优先级 2: 程序资源目录下的 ffmpeg
+  // 优先级 2: 程序资源目录及其子目录中搜索
   try {
     const appDir = await getAppDir();
-    const result = await tryDetectInDir(appDir, 'local');
-    if (result) return result;
+    const found = await searchFFmpegInDir(appDir);
+    if (found) {
+      const version = await checkFFmpeg(found);
+      return { path: found, version, source: 'local' };
+    }
   } catch {
-    // 获取应用目录失败，跳过
+    // 跳过
   }
 
-  // 优先级 3: 当前工作目录下的 ffmpeg
+  // 优先级 3: 当前工作目录及其子目录中搜索
   try {
     const cwd = await getCwd();
-    const result = await tryDetectInDir(cwd, 'local');
-    if (result) return result;
+    const found = await searchFFmpegInDir(cwd);
+    if (found) {
+      const version = await checkFFmpeg(found);
+      return { path: found, version, source: 'local' };
+    }
   } catch {
-    // 获取工作目录失败，跳过
+    // 跳过
   }
 
   // 优先级 4: 系统 PATH
