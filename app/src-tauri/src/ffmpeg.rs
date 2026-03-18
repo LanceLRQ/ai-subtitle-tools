@@ -88,6 +88,14 @@ pub fn get_app_dir(app: AppHandle) -> Result<String, String> {
     Ok(resource_dir.to_string_lossy().to_string())
 }
 
+/// 获取当前工作目录
+#[tauri::command]
+pub fn get_cwd() -> Result<String, String> {
+    std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| format!("Failed to get current directory: {}", e))
+}
+
 /// 提取视频音频（结构化参数，Rust 侧构建 FFmpeg 命令）
 #[tauri::command]
 pub async fn run_ffmpeg_extract_audio(

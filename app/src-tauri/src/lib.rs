@@ -15,6 +15,7 @@ pub fn run() {
             config::write_config,
             ffmpeg::check_ffmpeg_version,
             ffmpeg::get_app_dir,
+            ffmpeg::get_cwd,
             ffmpeg::run_ffmpeg_extract_audio,
             file_ops::get_temp_audio_path,
             file_ops::save_file,
