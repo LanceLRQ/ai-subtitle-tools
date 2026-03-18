@@ -1,6 +1,7 @@
 mod config;
 mod ffmpeg;
 mod file_ops;
+mod funasr;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,6 +22,7 @@ pub fn run() {
             file_ops::read_file_bytes,
             file_ops::remove_file,
             file_ops::cleanup_temp_files,
+            funasr::recognize_speech,
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {

@@ -3,7 +3,7 @@ use std::path::{Path, Component};
 use tauri::ipc::Response;
 
 /// 校验路径安全性：拒绝路径遍历攻击
-fn validate_path(path: &str) -> Result<(), String> {
+pub(crate) fn validate_path(path: &str) -> Result<(), String> {
     let p = Path::new(path);
 
     // 拒绝包含 ".." 的路径分量
