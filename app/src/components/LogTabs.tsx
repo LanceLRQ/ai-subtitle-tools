@@ -1,6 +1,6 @@
 'use client';
 
-import type { LogEntry, SubtitleEntry } from '@/lib/types';
+import type { LogEntry, SubtitleEntry, GlossaryEntry } from '@/lib/types';
 import LogPanel from './LogPanel';
 import SubtitlePreview from './SubtitlePreview';
 import GlossaryPanel from './GlossaryPanel';
@@ -13,11 +13,11 @@ interface LogTabsProps {
   entries: SubtitleEntry[];
   activeTab: LogTabType;
   onTabChange: (tab: LogTabType) => void;
-  glossary: string;
-  onGlossaryChange: (value: string) => void;
+  glossaries: GlossaryEntry[];
+  onGlossariesChange: (glossaries: GlossaryEntry[]) => void;
 }
 
-export default function LogTabs({ logs, entries, activeTab, onTabChange, glossary, onGlossaryChange }: LogTabsProps) {
+export default function LogTabs({ logs, entries, activeTab, onTabChange, glossaries, onGlossariesChange }: LogTabsProps) {
   const { t } = useI18n();
 
   const tabClass = (tab: LogTabType) =>
@@ -42,7 +42,7 @@ export default function LogTabs({ logs, entries, activeTab, onTabChange, glossar
       </div>
       <div className="mt-3">
         {activeTab === 'glossary' ? (
-          <GlossaryPanel value={glossary} onChange={onGlossaryChange} />
+          <GlossaryPanel glossaries={glossaries} onChange={onGlossariesChange} />
         ) : activeTab === 'log' ? (
           <LogPanel logs={logs} />
         ) : (

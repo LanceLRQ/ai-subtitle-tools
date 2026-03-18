@@ -6,7 +6,7 @@ const en: TranslationDict = {
   'app.description': 'Video subtitle generation and translation tool',
   'app.startButton': 'Generate Subtitles',
   'app.cancelButton': 'Cancel',
-  'app.retranslateButton': 'Re-translate',
+
   'app.saveAsButton': 'Save As...',
   'app.settingsTooltip': 'Settings',
 
@@ -44,6 +44,11 @@ const en: TranslationDict = {
   'pipeline.noVideoSelected': 'No video file selected',
   'pipeline.enableTranslationFirst': 'Please enable translation first',
   'pipeline.translationNotEnabled': 'Translation not enabled',
+  'pipeline.cacheFound': 'ASR cache found for this video. Use cached results?',
+  'pipeline.cacheUseButton': 'Use Cache',
+  'pipeline.cacheRegenerateButton': 'Regenerate',
+  'pipeline.usingCache': 'Using cached ASR results',
+  'pipeline.cacheSaved': 'ASR results cached',
   'pipeline.cancelled': 'Cancelled',
 
   // Settings panel
@@ -76,6 +81,24 @@ const en: TranslationDict = {
   'settings.debug.enabled': 'Debug mode',
   'settings.debug.hint': 'When enabled, saves raw ASR JSON and LLM request logs to the video directory',
 
+  // Storage
+  'settings.storage.legend': 'Storage',
+  'settings.storage.asrCache': 'ASR Recognition Cache',
+  'settings.storage.tempFiles': 'Temporary Files',
+  'settings.storage.configDir': 'Config Directory',
+  'settings.storage.clear': 'Clear',
+  'settings.storage.clearing': 'Clearing...',
+  'settings.storage.openDir': 'Open Directory',
+  'settings.storage.cleared': 'Cleared',
+  'settings.storage.clearCacheConfirm': 'Clear all ASR recognition cache? Next recognition will re-request the ASR service.',
+  'settings.storage.clearTempConfirm': 'Clear all temporary files?',
+  'settings.storage.viewCache': 'View',
+  'settings.storage.cacheList': 'ASR Cache List',
+  'settings.storage.cacheEmpty': 'No cache entries',
+  'settings.storage.cacheVideoPath': 'Video Path',
+  'settings.storage.cacheDataSize': 'Data Size',
+  'settings.storage.cacheDeleteConfirm': 'Delete this cache entry?',
+
   // Settings modal
   'settingsModal.title': 'Settings',
 
@@ -98,6 +121,13 @@ const en: TranslationDict = {
   'glossary.title': 'Glossary',
   'glossary.placeholder': 'One entry per line:\nsource -> translation\n\ne.g.\nフリーレン -> Frieren',
   'glossary.hint': 'Terms will be included in LLM prompts during translation',
+  'glossary.add': 'Add',
+  'glossary.defaultTitle': 'Default',
+  'glossary.untitled': 'Untitled {index}',
+  'glossary.empty': 'Click "Add" to create a glossary group',
+  'glossary.deleteConfirm': 'Delete "{title}"?',
+  'glossary.rename': 'Rename',
+  'glossary.delete': 'Delete',
 
   // Log tabs
   'logTabs.glossary': 'Glossary',

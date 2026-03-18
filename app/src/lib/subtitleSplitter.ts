@@ -10,6 +10,47 @@ interface TextFragment {
 /** 中英日韩常见标点 */
 const PUNCTUATION_PATTERN = /([，。、？！,.?!;；:：…—·]+)/;
 
+/** 标点及引号字符集 */
+const PUNCT_QUOTES = /[，。、？！,.?!;；:：…—·"'"'「」『』【】（）()\s]/;
+const LEADING_PUNCT = /^[，。、？！,.?!;；:：…—·"'"'「」『』【】（）()\s]+/;
+const TRAILING_PERIOD = /[。.]+$/;
+const TRAILING_ALL_PUNCT = /[，。、？！,.?!;；:：…—·"'"'「」『』【】（）()]+$/;
+const SPLIT_PUNCT = /[，、？！,.?!;；:：…—·]+/;
+
+/**
+ * 清理字幕文本的标点符号
+ *
+ * 规则：
+ * 1. 去掉开头的纯标点/引号
+ * 2. 末尾句号（。.）始终去掉
+ * 3. 只有单句内容时，去掉末尾所有标点
+ * 4. 清理后无实际内容则返回 null（跳过该条字幕）
+ */
+function cleanPunctuation(text: string): string | null {
+  // 去掉开头标点/引号
+  let cleaned = text.replace(LEADING_PUNCT, '');
+
+  // 检查是否还有实际内容
+  if (!hasContent(cleaned)) return null;
+
+  // 末尾句号始终去掉
+  cleaned = cleaned.replace(TRAILING_PERIOD, '');
+
+  // 判断是否为单句（按标点拆分后只有一段有效内容）
+  const parts = cleaned.split(SPLIT_PUNCT);
+  const contentParts = parts.filter((p) => p.replace(PUNCT_QUOTES, '').length > 0);
+  if (contentParts.length <= 1) {
+    cleaned = cleaned.replace(TRAILING_ALL_PUNCT, '');
+  }
+
+  return hasContent(cleaned) ? cleaned : null;
+}
+
+/** 检查文本是否包含非标点的实际内容 */
+function hasContent(text: string): boolean {
+  return text.split('').some((ch) => !PUNCT_QUOTES.test(ch));
+}
+
 /**
  * 按标点符号拆分文本为片段列表
  */
@@ -164,14 +205,17 @@ export function splitSegments(
 
     // 如果文本已经足够短，直接作为一条字幕
     if (text.length <= maxCharsPerLine) {
-      entries.push({
-        index: entryIndex++,
-        startTime: Math.round(segment.start * 1000),
-        endTime: Math.round(segment.end * 1000),
-        originalText: text,
-        translatedText: '',
-        speakerId: segment.speaker,
-      });
+      const cleaned = cleanPunctuation(text);
+      if (cleaned) {
+        entries.push({
+          index: entryIndex++,
+          startTime: Math.round(segment.start * 1000),
+          endTime: Math.round(segment.end * 1000),
+          originalText: cleaned,
+          translatedText: '',
+          speakerId: segment.speaker,
+        });
+      }
       continue;
     }
 
@@ -181,14 +225,17 @@ export function splitSegments(
 
     // 如果拆分结果只有一行，直接使用
     if (lines.length <= 1) {
-      entries.push({
-        index: entryIndex++,
-        startTime: Math.round(segment.start * 1000),
-        endTime: Math.round(segment.end * 1000),
-        originalText: lines[0] || text,
-        translatedText: '',
-        speakerId: segment.speaker,
-      });
+      const cleaned = cleanPunctuation(lines[0] || text);
+      if (cleaned) {
+        entries.push({
+          index: entryIndex++,
+          startTime: Math.round(segment.start * 1000),
+          endTime: Math.round(segment.end * 1000),
+          originalText: cleaned,
+          translatedText: '',
+          speakerId: segment.speaker,
+        });
+      }
       continue;
     }
 
@@ -198,11 +245,13 @@ export function splitSegments(
       : assignTimesLinear(lines, segment.start, segment.end);
 
     for (let i = 0; i < lines.length; i++) {
+      const cleaned = cleanPunctuation(lines[i]);
+      if (!cleaned) continue;
       entries.push({
         index: entryIndex++,
         startTime: times[i].startTime,
         endTime: times[i].endTime,
-        originalText: lines[i],
+        originalText: cleaned,
         translatedText: '',
         speakerId: segment.speaker,
       });

@@ -6,7 +6,7 @@ export interface TranslationDict {
   'app.description': string;
   'app.startButton': string;
   'app.cancelButton': string;
-  'app.retranslateButton': string;
+
   'app.saveAsButton': string;
   'app.settingsTooltip': string;
 
@@ -44,6 +44,11 @@ export interface TranslationDict {
   'pipeline.noVideoSelected': string;
   'pipeline.enableTranslationFirst': string;
   'pipeline.translationNotEnabled': string;
+  'pipeline.cacheFound': string;
+  'pipeline.cacheUseButton': string;
+  'pipeline.cacheRegenerateButton': string;
+  'pipeline.usingCache': string;
+  'pipeline.cacheSaved': string;
   'pipeline.cancelled': string;
 
   // Settings panel
@@ -76,6 +81,24 @@ export interface TranslationDict {
   'settings.debug.enabled': string;
   'settings.debug.hint': string;
 
+  // Storage
+  'settings.storage.legend': string;
+  'settings.storage.asrCache': string;
+  'settings.storage.tempFiles': string;
+  'settings.storage.configDir': string;
+  'settings.storage.clear': string;
+  'settings.storage.clearing': string;
+  'settings.storage.openDir': string;
+  'settings.storage.cleared': string;
+  'settings.storage.clearCacheConfirm': string;
+  'settings.storage.clearTempConfirm': string;
+  'settings.storage.viewCache': string;
+  'settings.storage.cacheList': string;
+  'settings.storage.cacheEmpty': string;
+  'settings.storage.cacheVideoPath': string;
+  'settings.storage.cacheDataSize': string;
+  'settings.storage.cacheDeleteConfirm': string;
+
   // Settings modal
   'settingsModal.title': string;
 
@@ -98,6 +121,13 @@ export interface TranslationDict {
   'glossary.title': string;
   'glossary.placeholder': string;
   'glossary.hint': string;
+  'glossary.add': string;
+  'glossary.defaultTitle': string;
+  'glossary.untitled': string;
+  'glossary.empty': string;
+  'glossary.deleteConfirm': string;
+  'glossary.rename': string;
+  'glossary.delete': string;
 
   // Log tabs
   'logTabs.glossary': string;

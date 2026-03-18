@@ -1,8 +1,10 @@
 use std::fs;
 use std::path::{Path, Component};
+use tauri::ipc::Response;
+use tauri::{AppHandle, Manager};
 
 /// 校验路径安全性：拒绝路径遍历攻击
-fn validate_path(path: &str) -> Result<(), String> {
+pub(crate) fn validate_path(path: &str) -> Result<(), String> {
     let p = Path::new(path);
 
     // 拒绝包含 ".." 的路径分量
@@ -20,6 +22,26 @@ fn validate_path(path: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// 将文件名中的非安全字符替换为下划线，并去除首尾空白
+fn sanitize_filename(name: &str) -> String {
+    let sanitized: String = name
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let trimmed = sanitized.trim_matches('_');
+    if trimmed.is_empty() {
+        "audio".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 /// 在系统临时目录下生成音频文件路径
 #[tauri::command]
 pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
@@ -30,6 +52,8 @@ pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
         .ok_or("Invalid video file path")?
         .to_string_lossy();
 
+    let safe_stem = sanitize_filename(&stem);
+
     // 使用系统临时目录，加 pid 避免多实例冲突
     let temp_dir = std::env::temp_dir();
     let app_temp = temp_dir.join("ai-subtitle-tools");
@@ -38,7 +62,7 @@ pub fn get_temp_audio_path(video_path: String) -> Result<String, String> {
 
     let audio_path = app_temp.join(format!(
         "{}_{}.wav",
-        stem,
+        safe_stem,
         std::process::id()
     ));
 
@@ -125,8 +149,11 @@ pub fn save_file(path: String, content: String) -> Result<(), String> {
 }
 
 /// 读取文件二进制内容（音频上传用）
+///
+/// 返回 `tauri::ipc::Response` 以使用二进制 IPC 传输，
+/// 避免 `Vec<u8>` 被 JSON 序列化为数字数组导致的严重性能问题。
 #[tauri::command]
-pub fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
+pub fn read_file_bytes(path: String) -> Result<Response, String> {
     validate_path(&path)?;
 
     // 限制只能读取音频文件
@@ -145,8 +172,10 @@ pub fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
         ));
     }
 
-    fs::read(&path)
-        .map_err(|e| format!("Failed to read file '{}': {}", path, e))
+    let bytes = fs::read(&path)
+        .map_err(|e| format!("Failed to read file '{}': {}", path, e))?;
+
+    Ok(Response::new(bytes))
 }
 
 /// 删除临时文件
@@ -168,4 +197,87 @@ pub fn remove_file(path: String) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// 计算目录总大小（字节）
+fn dir_size(path: &Path) -> u64 {
+    if !path.exists() {
+        return 0;
+    }
+    let mut total = 0u64;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let meta = entry.metadata();
+            if let Ok(meta) = meta {
+                if meta.is_file() {
+                    total += meta.len();
+                } else if meta.is_dir() {
+                    total += dir_size(&entry.path());
+                }
+            }
+        }
+    }
+    total
+}
+
+/// 获取临时目录大小（字节）
+#[tauri::command]
+pub fn get_temp_dir_size() -> Result<u64, String> {
+    let temp_dir = std::env::temp_dir().join("ai-subtitle-tools");
+    Ok(dir_size(&temp_dir))
+}
+
+/// 获取配置目录路径
+#[tauri::command]
+pub fn get_config_dir(app: AppHandle) -> Result<String, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to get config dir: {}", e))?;
+    Ok(config_dir.to_string_lossy().to_string())
+}
+
+/// 获取配置目录大小（字节）
+#[tauri::command]
+pub fn get_config_dir_size(app: AppHandle) -> Result<u64, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to get config dir: {}", e))?;
+    Ok(dir_size(&config_dir))
+}
+
+/// 在系统文件管理器中打开指定目录
+#[tauri::command]
+pub fn open_dir_in_explorer(path: String) -> Result<(), String> {
+    let dir = Path::new(&path);
+    if !dir.exists() {
+        return Err(format!("Directory does not exist: {}", path));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+
+    Ok(())
 }

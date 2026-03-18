@@ -1,5 +1,5 @@
 import { fetch } from '@tauri-apps/plugin-http';
-import type { AppConfig, SubtitleEntry } from './types';
+import type { AppConfig, SubtitleEntry, GlossaryEntry } from './types';
 
 interface ChatCompletionResponse {
   choices: Array<{
@@ -132,15 +132,16 @@ async function translateBatch(
   texts: string[],
   config: AppConfig['llm'],
   targetLanguage: string,
-  glossary?: string,
+  glossaries?: GlossaryEntry[],
   onStream?: (chunk: string) => void
 ): Promise<TranslateBatchResult> {
   const numberedTexts = texts.map((t, i) => `${i + 1}. ${t}`).join('\n');
 
-  // 解析并构建 glossary 段落
+  // 合并所有组的 glossary 内容并构建段落
   let glossarySection = '';
-  if (glossary?.trim()) {
-    const lines = glossary
+  if (glossaries && glossaries.length > 0) {
+    const merged = glossaries.map(g => g.content).join('\n');
+    const lines = merged
       .split('\n')
       .map(l => l.trim())
       .filter(l => l.includes('->'));
@@ -234,7 +235,7 @@ async function translateBatchWithRetry(
   texts: string[],
   config: AppConfig['llm'],
   targetLanguage: string,
-  glossary?: string,
+  glossaries?: GlossaryEntry[],
   maxRetries: number = 3,
   onStream?: (chunk: string) => void
 ): Promise<TranslateBatchResult> {
@@ -242,7 +243,7 @@ async function translateBatchWithRetry(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      return await translateBatch(texts, config, targetLanguage, glossary, onStream);
+      return await translateBatch(texts, config, targetLanguage, glossaries, onStream);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       if (attempt < maxRetries - 1) {
@@ -279,7 +280,7 @@ export async function translateAll(
     onDone: () => void;
   }
 ): Promise<SubtitleEntry[]> {
-  const { batchSize, targetLanguage, glossary } = config.translation;
+  const { batchSize, targetLanguage, glossaries } = config.translation;
   const result = [...entries];
   const total = entries.length;
   const totalBatches = Math.ceil(total / batchSize);
@@ -299,7 +300,7 @@ export async function translateAll(
       texts,
       config.llm,
       targetLanguage,
-      glossary || undefined,
+      glossaries.length > 0 ? glossaries : undefined,
       3,
       onStream
     );

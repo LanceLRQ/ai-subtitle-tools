@@ -1,3 +1,9 @@
+/** 专有名词组 */
+export interface GlossaryEntry {
+  title: string;
+  content: string;
+}
+
 /** 应用配置 */
 export interface AppConfig {
   language: 'zh' | 'en';
@@ -19,7 +25,7 @@ export interface AppConfig {
     batchSize: number;
     bilingual: boolean;
     targetLanguage: string;
-    glossary: string;
+    glossaries: GlossaryEntry[];
   };
   subtitle: {
     maxCharsPerLine: number;

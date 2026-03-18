@@ -28,7 +28,6 @@ export default function Home() {
     isProcessing,
     startProcessing,
     cancelProcessing,
-    retranslate,
     runDetectFFmpeg,
     exportSRT,
   } = usePipeline(log);
@@ -85,51 +84,41 @@ export default function Home() {
           />
         </SettingsModal>
 
-        {/* 文件选择 */}
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <FilePicker
-            videoPath={videoPath}
-            onSelect={setVideoPath}
-            disabled={isProcessing}
-          />
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="flex gap-3">
-          {!isProcessing ? (
-            <button
-              onClick={handleStart}
-              disabled={!videoPath}
-              className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-            >
-              {t('app.startButton')}
-            </button>
-          ) : (
-            <button
-              onClick={cancelProcessing}
-              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-            >
-              {t('app.cancelButton')}
-            </button>
-          )}
-
-          {pipeline.stage === 'done' && pipeline.entries.length > 0 && (
-            <>
+        {/* 文件选择 + 操作按钮 */}
+        <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex-1 min-w-0">
+            <FilePicker
+              videoPath={videoPath}
+              onSelect={setVideoPath}
+              disabled={isProcessing}
+            />
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {!isProcessing ? (
               <button
-                onClick={retranslate}
-                disabled={!config.translation.enabled}
-                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                onClick={handleStart}
+                disabled={!videoPath}
+                className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
               >
-                {t('app.retranslateButton')}
+                {t('app.startButton')}
               </button>
+            ) : (
+              <button
+                onClick={cancelProcessing}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {t('app.cancelButton')}
+              </button>
+            )}
+            {pipeline.stage === 'done' && pipeline.entries.length > 0 && (
               <button
                 onClick={handleExport}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 {t('app.saveAsButton')}
               </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
 
         {/* 进度条 */}
@@ -146,10 +135,10 @@ export default function Home() {
           entries={pipeline.entries}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          glossary={config.translation.glossary}
-          onGlossaryChange={(v) => updateConfig({
+          glossaries={config.translation.glossaries}
+          onGlossariesChange={(glossaries) => updateConfig({
             ...config,
-            translation: { ...config.translation, glossary: v },
+            translation: { ...config.translation, glossaries },
           })}
         />
       </div>

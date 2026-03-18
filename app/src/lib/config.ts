@@ -23,7 +23,7 @@ export function getDefaultConfig(): AppConfig {
       batchSize: 50,
       bilingual: true,
       targetLanguage: '中文',
-      glossary: '',
+      glossaries: [],
     },
     subtitle: {
       maxCharsPerLine: 30,
@@ -38,11 +38,12 @@ export function getDefaultConfig(): AppConfig {
 export async function loadConfig(): Promise<AppConfig> {
   try {
     const json = await invoke<string>('read_config');
-    const saved = JSON.parse(json) as Partial<AppConfig>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const saved = JSON.parse(json) as any;
     const defaults = getDefaultConfig();
 
     // 深度合并，确保新增字段有默认值
-    return {
+    const merged = {
       language: saved.language ?? defaults.language,
       ffmpeg: { ...defaults.ffmpeg, ...saved.ffmpeg },
       funasr: { ...defaults.funasr, ...saved.funasr },
@@ -51,6 +52,19 @@ export async function loadConfig(): Promise<AppConfig> {
       subtitle: { ...defaults.subtitle, ...saved.subtitle },
       debug: { ...defaults.debug, ...saved.debug },
     };
+
+    // 旧配置迁移：glossary (string) -> glossaries (GlossaryEntry[])
+    if (saved.translation && typeof saved.translation.glossary === 'string') {
+      const oldGlossary = saved.translation.glossary.trim();
+      if (oldGlossary) {
+        merged.translation.glossaries = [{ title: '默认', content: oldGlossary }];
+      } else {
+        merged.translation.glossaries = [];
+      }
+      delete (merged.translation as Record<string, unknown>).glossary;
+    }
+
+    return merged;
   } catch {
     return getDefaultConfig();
   }

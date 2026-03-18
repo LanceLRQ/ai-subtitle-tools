@@ -1,11 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
-import { fetch } from '@tauri-apps/plugin-http';
 import type { AppConfig, SubtitleEntry, FunASRResponse, FunASRSegment, FunASRWordToken } from './types';
 
 /**
  * 调用 FunASR API 识别音频文件
  *
- * 通过 Rust 读取音频二进制，然后 HTTP multipart 上传到 FunASR 服务
+ * 通过 Rust 侧流式上传音频文件，避免将大文件加载到 JS 内存
  */
 export interface AsrResult {
   entries: SubtitleEntry[];
@@ -13,45 +12,14 @@ export interface AsrResult {
   rawResponse: unknown;
 }
 
-export async function recognizeSpeech(
-  audioFilePath: string,
-  config: AppConfig['funasr']
-): Promise<AsrResult> {
-  // 读取音频文件二进制
-  const audioBytes = await invoke<number[]>('read_file_bytes', { path: audioFilePath });
-  const audioData = new Uint8Array(audioBytes);
+/**
+ * 解析 ASR 原始 JSON 字符串为 AsrResult
+ *
+ * 提取为独立函数，供缓存读取时复用
+ */
+export function parseAsrResponse(jsonStr: string): AsrResult {
+  const data = JSON.parse(jsonStr) as FunASRResponse;
 
-  // 构造 multipart/form-data
-  const formData = new FormData();
-  const audioBlob = new Blob([audioData], { type: 'audio/wav' });
-  formData.append('file', audioBlob, 'audio.wav');
-  formData.append('model', config.model);
-  formData.append('response_format', 'verbose_json');
-  formData.append('language', 'auto');
-  formData.append('word_timestamps', 'true');
-
-  // 构造请求头
-  const headers: Record<string, string> = {};
-  if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
-  }
-
-  // 发送请求
-  const url = `${config.url.replace(/\/+$/, '')}/v1/audio/transcriptions`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`FunASR API error (${response.status}): ${errorText}`);
-  }
-
-  const data = (await response.json()) as FunASRResponse;
-
-  // 将 segments 映射为 SubtitleEntry
   if (!data.segments || data.segments.length === 0) {
     throw new Error('FunASR returned no segments');
   }
@@ -92,4 +60,19 @@ export async function recognizeSpeech(
   }));
 
   return { entries, segments, rawResponse: data };
+}
+
+export async function recognizeSpeech(
+  audioFilePath: string,
+  config: AppConfig['funasr']
+): Promise<AsrResult> {
+  // 调用 Rust 命令（只传路径和配置，不传文件内容）
+  const jsonStr = await invoke<string>('recognize_speech', {
+    audioPath: audioFilePath,
+    funasrUrl: config.url,
+    apiKey: config.apiKey,
+    model: config.model,
+  });
+
+  return parseAsrResponse(jsonStr);
 }

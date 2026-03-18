@@ -88,6 +88,61 @@ pub fn get_app_dir(app: AppHandle) -> Result<String, String> {
     Ok(resource_dir.to_string_lossy().to_string())
 }
 
+/// 获取当前工作目录
+#[tauri::command]
+pub fn get_cwd() -> Result<String, String> {
+    std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| format!("Failed to get current directory: {}", e))
+}
+
+/// 在指定目录及其子目录中搜索 ffmpeg 可执行文件（最大深度 3 层）
+#[tauri::command]
+pub fn search_ffmpeg_in_dir(dir: String) -> Result<Option<String>, String> {
+    let root = Path::new(&dir);
+    if !root.exists() {
+        return Ok(None);
+    }
+
+    let binary_name = if cfg!(target_os = "windows") {
+        "ffmpeg.exe"
+    } else {
+        "ffmpeg"
+    };
+
+    // 先检查目录本身
+    let direct = root.join(binary_name);
+    if direct.exists() {
+        return Ok(Some(direct.to_string_lossy().to_string()));
+    }
+
+    // 递归搜索子目录（最大深度 3 层）
+    fn search(dir: &Path, name: &str, depth: u32) -> Option<std::path::PathBuf> {
+        if depth == 0 {
+            return None;
+        }
+        let entries = std::fs::read_dir(dir).ok()?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let candidate = path.join(name);
+                if candidate.exists() {
+                    return Some(candidate);
+                }
+                if let Some(found) = search(&path, name, depth - 1) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+
+    match search(root, binary_name, 3) {
+        Some(found) => Ok(Some(found.to_string_lossy().to_string())),
+        None => Ok(None),
+    }
+}
+
 /// 提取视频音频（结构化参数，Rust 侧构建 FFmpeg 命令）
 #[tauri::command]
 pub async fn run_ffmpeg_extract_audio(

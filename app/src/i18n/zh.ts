@@ -4,9 +4,9 @@ const zh: TranslationDict = {
   // App
   'app.title': 'AI视频字幕生成工具',
   'app.description': '视频字幕生成与翻译工具',
-  'app.startButton': '开始生成字幕',
+  'app.startButton': '生成字幕',
   'app.cancelButton': '取消',
-  'app.retranslateButton': '重新翻译',
+
   'app.saveAsButton': '另存为...',
   'app.settingsTooltip': '设置',
 
@@ -44,6 +44,11 @@ const zh: TranslationDict = {
   'pipeline.noVideoSelected': '未选择视频文件',
   'pipeline.enableTranslationFirst': '请先启用翻译功能',
   'pipeline.translationNotEnabled': '翻译未启用',
+  'pipeline.cacheFound': '检测到该视频的语音识别缓存，是否使用缓存结果？',
+  'pipeline.cacheUseButton': '使用缓存',
+  'pipeline.cacheRegenerateButton': '重新生成',
+  'pipeline.usingCache': '使用缓存的语音识别结果',
+  'pipeline.cacheSaved': '语音识别结果已缓存',
   'pipeline.cancelled': '已取消',
 
   // Settings panel
@@ -76,6 +81,24 @@ const zh: TranslationDict = {
   'settings.debug.enabled': '调试模式',
   'settings.debug.hint': '开启后将 ASR 原始 JSON 和 LLM 请求日志保存到视频所在目录',
 
+  // Storage
+  'settings.storage.legend': '存储管理',
+  'settings.storage.asrCache': 'ASR 识别缓存',
+  'settings.storage.tempFiles': '临时文件',
+  'settings.storage.configDir': '配置目录',
+  'settings.storage.clear': '清理',
+  'settings.storage.clearing': '清理中...',
+  'settings.storage.openDir': '打开目录',
+  'settings.storage.cleared': '已清理',
+  'settings.storage.clearCacheConfirm': '确定清理所有 ASR 识别缓存？清理后下次识别将重新请求 ASR 服务。',
+  'settings.storage.clearTempConfirm': '确定清理所有临时文件？',
+  'settings.storage.viewCache': '查看',
+  'settings.storage.cacheList': 'ASR 缓存列表',
+  'settings.storage.cacheEmpty': '暂无缓存记录',
+  'settings.storage.cacheVideoPath': '视频路径',
+  'settings.storage.cacheDataSize': '数据大小',
+  'settings.storage.cacheDeleteConfirm': '确定删除该条缓存记录？',
+
   // Settings modal
   'settingsModal.title': '设置',
 
@@ -98,6 +121,13 @@ const zh: TranslationDict = {
   'glossary.title': '专有名词',
   'glossary.placeholder': '每行一个词条，格式：\n原文 -> 译文\n\n例如：\nフリーレン -> 芙莉莲',
   'glossary.hint': '翻译时将提醒 LLM 使用指定译名',
+  'glossary.add': '新增',
+  'glossary.defaultTitle': '默认',
+  'glossary.untitled': '未命名{index}',
+  'glossary.empty': '点击「新增」添加专有名词组',
+  'glossary.deleteConfirm': '确定删除「{title}」？',
+  'glossary.rename': '重命名',
+  'glossary.delete': '删除',
 
   // Log tabs
   'logTabs.glossary': '专有名词',
