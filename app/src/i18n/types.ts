@@ -6,7 +6,7 @@ export interface TranslationDict {
   'app.description': string;
   'app.startButton': string;
   'app.cancelButton': string;
-  'app.retranslateButton': string;
+
   'app.saveAsButton': string;
   'app.settingsTooltip': string;
 

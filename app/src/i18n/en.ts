@@ -6,7 +6,7 @@ const en: TranslationDict = {
   'app.description': 'Video subtitle generation and translation tool',
   'app.startButton': 'Generate Subtitles',
   'app.cancelButton': 'Cancel',
-  'app.retranslateButton': 'Re-translate',
+
   'app.saveAsButton': 'Save As...',
   'app.settingsTooltip': 'Settings',
 

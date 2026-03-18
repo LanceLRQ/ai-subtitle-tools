@@ -4,9 +4,9 @@ const zh: TranslationDict = {
   // App
   'app.title': 'AI视频字幕生成工具',
   'app.description': '视频字幕生成与翻译工具',
-  'app.startButton': '开始生成字幕',
+  'app.startButton': '生成字幕',
   'app.cancelButton': '取消',
-  'app.retranslateButton': '重新翻译',
+
   'app.saveAsButton': '另存为...',
   'app.settingsTooltip': '设置',
 
