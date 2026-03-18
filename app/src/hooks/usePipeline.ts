@@ -191,7 +191,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       // 阶段 5: 导出
       updatePipeline({ stage: 'exporting', progress: 95, message: t('pipeline.exporting') });
       const isBilingual = config.translation.enabled && config.translation.bilingual;
-      const srtContent = generateSRT(finalEntries, isBilingual);
+      const srtContent = generateSRT(finalEntries, isBilingual, config.translation.enabled);
       const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
       await invoke('save_file', { path: srtPath, content: srtContent });
       updatePipeline({ stage: 'done', progress: 100, message: t('pipeline.exported', { path: srtPath }) });
@@ -279,7 +279,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       // 自动导出
       updatePipeline({ stage: 'exporting', progress: 95, message: t('pipeline.exporting') });
       const isBilingual = config.translation.bilingual;
-      const srtContent = generateSRT(finalEntries, isBilingual);
+      const srtContent = generateSRT(finalEntries, isBilingual, config.translation.enabled);
       const srtPath = videoPath.replace(/\.[^.]+$/, '.srt');
       await invoke('save_file', { path: srtPath, content: srtContent });
       updatePipeline({ stage: 'done', progress: 100, message: t('pipeline.exported', { path: srtPath }) });
@@ -297,14 +297,14 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
   const exportSRT = useCallback(async (path: string) => {
     const t = tRef.current;
     try {
-      const srtContent = generateSRT(pipeline.entries, config.translation.bilingual);
+      const srtContent = generateSRT(pipeline.entries, config.translation.bilingual, config.translation.enabled);
       await invoke('save_file', { path, content: srtContent });
       updatePipeline({ message: t('pipeline.exported', { path }) });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       updatePipeline({ stage: 'error', message: t('pipeline.exportFailed', { error: msg }), error: msg });
     }
-  }, [pipeline.entries, config.translation.bilingual, updatePipeline]);
+  }, [pipeline.entries, config.translation.bilingual, config.translation.enabled, updatePipeline]);
 
   const stageKey = STAGE_KEY_MAP[pipeline.stage];
   const stageLabel = t(`stage.${stageKey}` as keyof import('@/i18n/types').TranslationDict);

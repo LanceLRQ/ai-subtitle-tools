@@ -42,7 +42,7 @@ export function parseTimestamp(str: string): number {
 /**
  * 生成 SRT 字幕内容
  */
-export function generateSRT(entries: SubtitleEntry[], bilingual: boolean): string {
+export function generateSRT(entries: SubtitleEntry[], bilingual: boolean, translationEnabled: boolean = false): string {
   return entries
     .map((entry, i) => {
       const index = i + 1;
@@ -51,6 +51,8 @@ export function generateSRT(entries: SubtitleEntry[], bilingual: boolean): strin
       let text = entry.originalText;
       if (bilingual && entry.translatedText) {
         text = `${entry.originalText}\n${entry.translatedText}`;
+      } else if (translationEnabled && entry.translatedText) {
+        text = entry.translatedText;
       }
 
       return `${index}\n${timeRange}\n${text}`;
