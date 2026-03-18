@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { GlossaryEntry } from '@/lib/types';
 import { useI18n } from '@/i18n';
+import { ask } from '@tauri-apps/plugin-dialog';
 
 interface GlossaryPanelProps {
   glossaries: GlossaryEntry[];
@@ -104,9 +105,12 @@ export default function GlossaryPanel({ glossaries, onChange }: GlossaryPanelPro
     onChange(updated);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const entry = glossaries[safeIndex];
-    if (!confirm(t('glossary.deleteConfirm', { title: entry.title }))) return;
+    const confirmed = await ask(t('glossary.deleteConfirm', { title: entry.title }), {
+      kind: 'warning',
+    });
+    if (!confirmed) return;
     const updated = glossaries.filter((_, i) => i !== safeIndex);
     onChange(updated);
   };
