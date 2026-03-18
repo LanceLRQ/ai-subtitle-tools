@@ -81,6 +81,18 @@ const zh: TranslationDict = {
   'settings.debug.enabled': '调试模式',
   'settings.debug.hint': '开启后将 ASR 原始 JSON 和 LLM 请求日志保存到视频所在目录',
 
+  // Storage
+  'settings.storage.legend': '存储管理',
+  'settings.storage.asrCache': 'ASR 识别缓存',
+  'settings.storage.tempFiles': '临时文件',
+  'settings.storage.configDir': '配置目录',
+  'settings.storage.clear': '清理',
+  'settings.storage.clearing': '清理中...',
+  'settings.storage.openDir': '打开目录',
+  'settings.storage.cleared': '已清理',
+  'settings.storage.clearCacheConfirm': '确定清理所有 ASR 识别缓存？清理后下次识别将重新请求 ASR 服务。',
+  'settings.storage.clearTempConfirm': '确定清理所有临时文件？',
+
   // Settings modal
   'settingsModal.title': '设置',
 

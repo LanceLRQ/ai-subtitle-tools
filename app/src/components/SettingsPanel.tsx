@@ -1,10 +1,21 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { ask } from '@tauri-apps/plugin-dialog';
 import type { AppConfig, FFmpegDetectResult } from '@/lib/types';
 import { testLLMConnection } from '@/lib/translator';
 import { useI18n } from '@/i18n';
 import type { Locale } from '@/i18n';
+
+/** 格式化文件大小 */
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const size = bytes / Math.pow(1024, i);
+  return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
 
 interface SettingsPanelProps {
   config: AppConfig;
@@ -140,6 +151,77 @@ export default function SettingsPanel({
     message: string;
     hadThinkingTags?: boolean;
   }>({ status: 'idle', message: '' });
+
+  // 存储管理状态
+  const [storageInfo, setStorageInfo] = useState<{
+    cacheSize: number;
+    tempSize: number;
+    configSize: number;
+    configDir: string;
+  } | null>(null);
+  const [clearingCache, setClearingCache] = useState(false);
+  const [clearingTemp, setClearingTemp] = useState(false);
+  const [cacheCleared, setCacheCleared] = useState(false);
+  const [tempCleared, setTempCleared] = useState(false);
+
+  const refreshStorageInfo = useCallback(async () => {
+    try {
+      const [cacheSize, tempSize, configSize, configDir] = await Promise.all([
+        invoke<number>('get_asr_cache_size'),
+        invoke<number>('get_temp_dir_size'),
+        invoke<number>('get_config_dir_size'),
+        invoke<string>('get_config_dir'),
+      ]);
+      setStorageInfo({ cacheSize, tempSize, configSize, configDir });
+    } catch {
+      // 忽略错误
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshStorageInfo();
+  }, [refreshStorageInfo]);
+
+  const handleClearCache = useCallback(async () => {
+    const confirmed = await ask(t('settings.storage.clearCacheConfirm'), { kind: 'warning' });
+    if (!confirmed) return;
+    setClearingCache(true);
+    setCacheCleared(false);
+    try {
+      await invoke('clear_asr_cache');
+      setCacheCleared(true);
+      await refreshStorageInfo();
+    } catch (err) {
+      console.error('Failed to clear cache:', err);
+    } finally {
+      setClearingCache(false);
+    }
+  }, [refreshStorageInfo, t]);
+
+  const handleClearTemp = useCallback(async () => {
+    const confirmed = await ask(t('settings.storage.clearTempConfirm'), { kind: 'warning' });
+    if (!confirmed) return;
+    setClearingTemp(true);
+    setTempCleared(false);
+    try {
+      await invoke('cleanup_temp_files');
+      setTempCleared(true);
+      await refreshStorageInfo();
+    } catch (err) {
+      console.error('Failed to clear temp:', err);
+    } finally {
+      setClearingTemp(false);
+    }
+  }, [refreshStorageInfo, t]);
+
+  const handleOpenConfigDir = useCallback(async () => {
+    if (!storageInfo?.configDir) return;
+    try {
+      await invoke('open_dir_in_explorer', { path: storageInfo.configDir });
+    } catch (err) {
+      console.error('Failed to open config dir:', err);
+    }
+  }, [storageInfo?.configDir]);
 
   const handleTestLLM = useCallback(async () => {
     setLlmTestState({ status: 'testing', message: t('settings.llm.testing') });
@@ -382,6 +464,62 @@ export default function SettingsPanel({
           <span className="text-xs text-gray-400 dark:text-gray-500">
             {t('settings.debug.hint')}
           </span>
+        </div>
+      </fieldset>
+
+      {/* 存储管理 */}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.storage.legend')}</legend>
+        <div className="space-y-1.5">
+          {/* ASR 缓存 */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.storage.asrCache')}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {storageInfo ? formatSize(storageInfo.cacheSize) : '...'}
+              </span>
+            </div>
+            <button
+              onClick={handleClearCache}
+              disabled={clearingCache || (storageInfo?.cacheSize === 0)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+            >
+              {clearingCache ? t('settings.storage.clearing') : cacheCleared ? t('settings.storage.cleared') : t('settings.storage.clear')}
+            </button>
+          </div>
+
+          {/* 临时文件 */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.storage.tempFiles')}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {storageInfo ? formatSize(storageInfo.tempSize) : '...'}
+              </span>
+            </div>
+            <button
+              onClick={handleClearTemp}
+              disabled={clearingTemp || (storageInfo?.tempSize === 0)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+            >
+              {clearingTemp ? t('settings.storage.clearing') : tempCleared ? t('settings.storage.cleared') : t('settings.storage.clear')}
+            </button>
+          </div>
+
+          {/* 配置目录 */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('settings.storage.configDir')}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {storageInfo ? formatSize(storageInfo.configSize) : '...'}
+              </span>
+            </div>
+            <button
+              onClick={handleOpenConfigDir}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors"
+            >
+              {t('settings.storage.openDir')}
+            </button>
+          </div>
         </div>
       </fieldset>
     </div>

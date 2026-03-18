@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, Component};
 use tauri::ipc::Response;
+use tauri::{AppHandle, Manager};
 
 /// 校验路径安全性：拒绝路径遍历攻击
 pub(crate) fn validate_path(path: &str) -> Result<(), String> {
@@ -196,4 +197,87 @@ pub fn remove_file(path: String) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// 计算目录总大小（字节）
+fn dir_size(path: &Path) -> u64 {
+    if !path.exists() {
+        return 0;
+    }
+    let mut total = 0u64;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let meta = entry.metadata();
+            if let Ok(meta) = meta {
+                if meta.is_file() {
+                    total += meta.len();
+                } else if meta.is_dir() {
+                    total += dir_size(&entry.path());
+                }
+            }
+        }
+    }
+    total
+}
+
+/// 获取临时目录大小（字节）
+#[tauri::command]
+pub fn get_temp_dir_size() -> Result<u64, String> {
+    let temp_dir = std::env::temp_dir().join("ai-subtitle-tools");
+    Ok(dir_size(&temp_dir))
+}
+
+/// 获取配置目录路径
+#[tauri::command]
+pub fn get_config_dir(app: AppHandle) -> Result<String, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to get config dir: {}", e))?;
+    Ok(config_dir.to_string_lossy().to_string())
+}
+
+/// 获取配置目录大小（字节）
+#[tauri::command]
+pub fn get_config_dir_size(app: AppHandle) -> Result<u64, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to get config dir: {}", e))?;
+    Ok(dir_size(&config_dir))
+}
+
+/// 在系统文件管理器中打开指定目录
+#[tauri::command]
+pub fn open_dir_in_explorer(path: String) -> Result<(), String> {
+    let dir = Path::new(&path);
+    if !dir.exists() {
+        return Err(format!("Directory does not exist: {}", path));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open directory: {}", e))?;
+    }
+
+    Ok(())
 }

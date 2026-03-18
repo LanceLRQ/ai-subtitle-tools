@@ -81,6 +81,18 @@ export interface TranslationDict {
   'settings.debug.enabled': string;
   'settings.debug.hint': string;
 
+  // Storage
+  'settings.storage.legend': string;
+  'settings.storage.asrCache': string;
+  'settings.storage.tempFiles': string;
+  'settings.storage.configDir': string;
+  'settings.storage.clear': string;
+  'settings.storage.clearing': string;
+  'settings.storage.openDir': string;
+  'settings.storage.cleared': string;
+  'settings.storage.clearCacheConfirm': string;
+  'settings.storage.clearTempConfirm': string;
+
   // Settings modal
   'settingsModal.title': string;
 

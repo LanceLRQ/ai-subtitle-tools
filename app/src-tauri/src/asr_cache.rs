@@ -64,6 +64,30 @@ pub fn read_asr_cache(app: AppHandle, video_path: String) -> Result<String, Stri
     Ok(value.value().to_string())
 }
 
+/// 获取 ASR 缓存文件大小（字节），不存在则返回 0
+#[tauri::command]
+pub fn get_asr_cache_size(app: AppHandle) -> Result<u64, String> {
+    let path = db_path(&app)?;
+    if path.exists() {
+        let metadata = std::fs::metadata(&path)
+            .map_err(|e| format!("Failed to get cache file metadata: {}", e))?;
+        Ok(metadata.len())
+    } else {
+        Ok(0)
+    }
+}
+
+/// 清除 ASR 缓存（删除数据库文件）
+#[tauri::command]
+pub fn clear_asr_cache(app: AppHandle) -> Result<(), String> {
+    let path = db_path(&app)?;
+    if path.exists() {
+        std::fs::remove_file(&path)
+            .map_err(|e| format!("Failed to delete cache file: {}", e))?;
+    }
+    Ok(())
+}
+
 /// 写入 ASR 缓存
 #[tauri::command]
 pub fn write_asr_cache(

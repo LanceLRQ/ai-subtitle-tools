@@ -81,6 +81,18 @@ const en: TranslationDict = {
   'settings.debug.enabled': 'Debug mode',
   'settings.debug.hint': 'When enabled, saves raw ASR JSON and LLM request logs to the video directory',
 
+  // Storage
+  'settings.storage.legend': 'Storage',
+  'settings.storage.asrCache': 'ASR Recognition Cache',
+  'settings.storage.tempFiles': 'Temporary Files',
+  'settings.storage.configDir': 'Config Directory',
+  'settings.storage.clear': 'Clear',
+  'settings.storage.clearing': 'Clearing...',
+  'settings.storage.openDir': 'Open Directory',
+  'settings.storage.cleared': 'Cleared',
+  'settings.storage.clearCacheConfirm': 'Clear all ASR recognition cache? Next recognition will re-request the ASR service.',
+  'settings.storage.clearTempConfirm': 'Clear all temporary files?',
+
   // Settings modal
   'settingsModal.title': 'Settings',
 

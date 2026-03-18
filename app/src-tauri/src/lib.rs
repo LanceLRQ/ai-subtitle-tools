@@ -24,10 +24,16 @@ pub fn run() {
             file_ops::read_file_bytes,
             file_ops::remove_file,
             file_ops::cleanup_temp_files,
+            file_ops::get_temp_dir_size,
+            file_ops::get_config_dir,
+            file_ops::get_config_dir_size,
+            file_ops::open_dir_in_explorer,
             funasr::recognize_speech,
             asr_cache::check_asr_cache,
             asr_cache::read_asr_cache,
             asr_cache::write_asr_cache,
+            asr_cache::get_asr_cache_size,
+            asr_cache::clear_asr_cache,
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {
