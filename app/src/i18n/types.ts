@@ -44,6 +44,11 @@ export interface TranslationDict {
   'pipeline.noVideoSelected': string;
   'pipeline.enableTranslationFirst': string;
   'pipeline.translationNotEnabled': string;
+  'pipeline.cacheFound': string;
+  'pipeline.cacheUseButton': string;
+  'pipeline.cacheRegenerateButton': string;
+  'pipeline.usingCache': string;
+  'pipeline.cacheSaved': string;
   'pipeline.cancelled': string;
 
   // Settings panel

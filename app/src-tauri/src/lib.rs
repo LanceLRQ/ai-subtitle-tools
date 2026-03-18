@@ -1,3 +1,4 @@
+mod asr_cache;
 mod config;
 mod ffmpeg;
 mod file_ops;
@@ -23,6 +24,9 @@ pub fn run() {
             file_ops::remove_file,
             file_ops::cleanup_temp_files,
             funasr::recognize_speech,
+            asr_cache::check_asr_cache,
+            asr_cache::read_asr_cache,
+            asr_cache::write_asr_cache,
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {

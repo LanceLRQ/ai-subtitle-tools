@@ -44,6 +44,11 @@ const en: TranslationDict = {
   'pipeline.noVideoSelected': 'No video file selected',
   'pipeline.enableTranslationFirst': 'Please enable translation first',
   'pipeline.translationNotEnabled': 'Translation not enabled',
+  'pipeline.cacheFound': 'ASR cache found for this video. Use cached results?',
+  'pipeline.cacheUseButton': 'Use Cache',
+  'pipeline.cacheRegenerateButton': 'Regenerate',
+  'pipeline.usingCache': 'Using cached ASR results',
+  'pipeline.cacheSaved': 'ASR results cached',
   'pipeline.cancelled': 'Cancelled',
 
   // Settings panel

@@ -6,7 +6,9 @@ import type { PipelineLogCallbacks } from '@/hooks/useLog';
 import { loadConfig, saveConfig, getDefaultConfig } from '@/lib/config';
 import { detectFFmpeg } from '@/lib/ffmpegDetector';
 import { extractAudio, getTempAudioPath, cleanupTempFiles } from '@/lib/ffmpeg';
-import { recognizeSpeech } from '@/lib/funasr';
+import { recognizeSpeech, parseAsrResponse } from '@/lib/funasr';
+import { checkAsrCache, readAsrCache, writeAsrCache } from '@/lib/asrCache';
+import { ask } from '@tauri-apps/plugin-dialog';
 import { splitSegments } from '@/lib/subtitleSplitter';
 import { translateAll } from '@/lib/translator';
 import { generateSRT } from '@/lib/subtitle';
@@ -108,39 +110,78 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
       log?.addLog('info', t('pipeline.ffmpegReadyWithSource', { version: ffmpeg.version, source: ffmpeg.source }));
       if (cancelledRef.current) return;
 
-      // 阶段 2: 提取音频
-      updatePipeline({ stage: 'extracting-audio', progress: 2.5, message: t('pipeline.extractingAudio') });
-      log?.addLog('info', t('pipeline.extractingAudio'));
-      tempAudioPath = await getTempAudioPath(videoPath);
-      await extractAudio(videoPath, tempAudioPath, ffmpeg.path, (payload) => {
-        updatePipeline({ message: t('pipeline.extractingLine', { line: payload.line.slice(-80) }) });
-      });
-      updatePipeline({ progress: 5 });
-      log?.addLog('info', t('pipeline.audioExtracted'));
+      // 缓存检查：在提取音频之前检查是否有 ASR 缓存
+      let useCachedAsr = false;
+      let cachedAsrJson: string | null = null;
+      try {
+        const hasCache = await checkAsrCache(videoPath);
+        if (hasCache) {
+          const useCache = await ask(t('pipeline.cacheFound'), {
+            kind: 'info',
+            okLabel: t('pipeline.cacheUseButton'),
+            cancelLabel: t('pipeline.cacheRegenerateButton'),
+          });
+          if (cancelledRef.current) return;
+          if (useCache) {
+            cachedAsrJson = await readAsrCache(videoPath);
+            useCachedAsr = true;
+          }
+        }
+      } catch {
+        // 缓存检查失败不影响主流程
+      }
       if (cancelledRef.current) return;
 
-      // 阶段 3: 语音识别（双曲线假进度）
-      updatePipeline({ stage: 'recognizing', progress: 5, message: t('pipeline.recognizing') });
-      log?.addLog('info', t('pipeline.recognizing'));
-      const asrStartTime = Date.now();
-      const K = 30;
-      asrTimerRef.current = setInterval(() => {
-        const t = (Date.now() - asrStartTime) / 1000;
-        const fakeProgress = Math.round(5 + 50 * t / (t + K));
-        updatePipeline({ progress: fakeProgress });
-      }, 1000);
-      const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
-      if (asrTimerRef.current) {
-        clearInterval(asrTimerRef.current);
-        asrTimerRef.current = null;
-      }
-      const entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
-      updatePipeline({ entries, progress: 55 });
-      log?.addLog('info', t('pipeline.recognitionDone', { count: entries.length }));
+      let entries;
+      if (useCachedAsr && cachedAsrJson) {
+        // 使用缓存的 ASR 结果，跳过阶段 2 和阶段 3
+        updatePipeline({ progress: 5, message: t('pipeline.usingCache') });
+        log?.addLog('info', t('pipeline.usingCache'));
+        const asrResult = parseAsrResponse(cachedAsrJson);
+        entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
+        updatePipeline({ entries, progress: 55 });
+        log?.addLog('info', t('pipeline.recognitionDone', { count: entries.length }));
+      } else {
+        // 阶段 2: 提取音频
+        updatePipeline({ stage: 'extracting-audio', progress: 2.5, message: t('pipeline.extractingAudio') });
+        log?.addLog('info', t('pipeline.extractingAudio'));
+        tempAudioPath = await getTempAudioPath(videoPath);
+        await extractAudio(videoPath, tempAudioPath, ffmpeg.path, (payload) => {
+          updatePipeline({ message: t('pipeline.extractingLine', { line: payload.line.slice(-80) }) });
+        });
+        updatePipeline({ progress: 5 });
+        log?.addLog('info', t('pipeline.audioExtracted'));
+        if (cancelledRef.current) return;
 
-      // 调试模式：保存 ASR 原始 JSON
-      if (config.debug.enabled) {
-        writeAsrDebugLog(videoPath, asrResult.rawResponse).catch(console.error);
+        // 阶段 3: 语音识别（双曲线假进度）
+        updatePipeline({ stage: 'recognizing', progress: 5, message: t('pipeline.recognizing') });
+        log?.addLog('info', t('pipeline.recognizing'));
+        const asrStartTime = Date.now();
+        const K = 30;
+        asrTimerRef.current = setInterval(() => {
+          const t = (Date.now() - asrStartTime) / 1000;
+          const fakeProgress = Math.round(5 + 50 * t / (t + K));
+          updatePipeline({ progress: fakeProgress });
+        }, 1000);
+        const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
+        if (asrTimerRef.current) {
+          clearInterval(asrTimerRef.current);
+          asrTimerRef.current = null;
+        }
+        entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
+        updatePipeline({ entries, progress: 55 });
+        log?.addLog('info', t('pipeline.recognitionDone', { count: entries.length }));
+
+        // 调试模式：保存 ASR 原始 JSON
+        if (config.debug.enabled) {
+          writeAsrDebugLog(videoPath, asrResult.rawResponse).catch(console.error);
+        }
+
+        // 缓存 ASR 结果（用原始 JSON 字符串）
+        const asrJsonStr = JSON.stringify(asrResult.rawResponse);
+        writeAsrCache(videoPath, asrJsonStr).then(() => {
+          log?.addLog('info', t('pipeline.cacheSaved'));
+        }).catch(console.error);
       }
       if (cancelledRef.current) return;
 

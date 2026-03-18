@@ -12,21 +12,14 @@ export interface AsrResult {
   rawResponse: unknown;
 }
 
-export async function recognizeSpeech(
-  audioFilePath: string,
-  config: AppConfig['funasr']
-): Promise<AsrResult> {
-  // 调用 Rust 命令（只传路径和配置，不传文件内容）
-  const jsonStr = await invoke<string>('recognize_speech', {
-    audioPath: audioFilePath,
-    funasrUrl: config.url,
-    apiKey: config.apiKey,
-    model: config.model,
-  });
-
+/**
+ * 解析 ASR 原始 JSON 字符串为 AsrResult
+ *
+ * 提取为独立函数，供缓存读取时复用
+ */
+export function parseAsrResponse(jsonStr: string): AsrResult {
   const data = JSON.parse(jsonStr) as FunASRResponse;
 
-  // 将 segments 映射为 SubtitleEntry
   if (!data.segments || data.segments.length === 0) {
     throw new Error('FunASR returned no segments');
   }
@@ -67,4 +60,19 @@ export async function recognizeSpeech(
   }));
 
   return { entries, segments, rawResponse: data };
+}
+
+export async function recognizeSpeech(
+  audioFilePath: string,
+  config: AppConfig['funasr']
+): Promise<AsrResult> {
+  // 调用 Rust 命令（只传路径和配置，不传文件内容）
+  const jsonStr = await invoke<string>('recognize_speech', {
+    audioPath: audioFilePath,
+    funasrUrl: config.url,
+    apiKey: config.apiKey,
+    model: config.model,
+  });
+
+  return parseAsrResponse(jsonStr);
 }

@@ -44,6 +44,11 @@ const zh: TranslationDict = {
   'pipeline.noVideoSelected': '未选择视频文件',
   'pipeline.enableTranslationFirst': '请先启用翻译功能',
   'pipeline.translationNotEnabled': '翻译未启用',
+  'pipeline.cacheFound': '检测到该视频的语音识别缓存，是否使用缓存结果？',
+  'pipeline.cacheUseButton': '使用缓存',
+  'pipeline.cacheRegenerateButton': '重新生成',
+  'pipeline.usingCache': '使用缓存的语音识别结果',
+  'pipeline.cacheSaved': '语音识别结果已缓存',
   'pipeline.cancelled': '已取消',
 
   // Settings panel
