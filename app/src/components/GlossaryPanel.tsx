@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { GlossaryEntry } from '@/lib/types';
 import { useI18n } from '@/i18n';
 import { ask } from '@tauri-apps/plugin-dialog';
@@ -16,24 +16,24 @@ export default function GlossaryPanel({ glossaries, onChange }: GlossaryPanelPro
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [localContent, setLocalContent] = useState('');
+  const [lastSyncKey, setLastSyncKey] = useState('');
   const renameInputRef = useRef<HTMLInputElement>(null);
-  const glossariesRef = useRef(glossaries);
-  glossariesRef.current = glossaries;
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // activeIndex 越界时修正
   const safeIndex = glossaries.length > 0
     ? Math.min(activeIndex, glossaries.length - 1)
     : 0;
-  useEffect(() => {
+
+  // 用 syncKey 检测切换/外部变化，在渲染阶段直接重置 localContent
+  const syncKey = `${safeIndex}:${glossaries.length}:${glossaries[safeIndex]?.title ?? ''}`;
+  if (syncKey !== lastSyncKey) {
+    setLocalContent(glossaries[safeIndex]?.content ?? '');
+    setLastSyncKey(syncKey);
     if (safeIndex !== activeIndex) {
       setActiveIndex(safeIndex);
     }
-  }, [safeIndex, activeIndex]);
-
-  // 当切换 tab 或 glossaries 变化时，同步本地内容
-  useEffect(() => {
-    setLocalContent(glossaries[safeIndex]?.content ?? '');
-  }, [safeIndex, glossaries]);
+  }
 
   // 聚焦重命名输入框
   useEffect(() => {
@@ -43,69 +43,82 @@ export default function GlossaryPanel({ glossaries, onChange }: GlossaryPanelPro
     }
   }, [isRenaming]);
 
-  // 防抖同步到父组件
-  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flushContent = useCallback((content: string) => {
-    const idx = safeIndex;
-    const updated = glossariesRef.current.map((g, i) =>
-      i === idx ? { ...g, content } : g
-    );
-    onChange(updated);
-  }, [safeIndex, onChange]);
+  // 清理防抖定时器
+  useEffect(() => {
+    return () => {
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    };
+  }, []);
 
-  const handleContentChange = (content: string) => {
+  // 构建当前最新的 glossaries（合并 localContent）
+  const buildUpdatedGlossaries = useCallback(() => {
+    return glossaries.map((g, i) =>
+      i === safeIndex ? { ...g, content: localContent } : g
+    );
+  }, [glossaries, safeIndex, localContent]);
+
+  const flushContent = useCallback(() => {
+    onChange(buildUpdatedGlossaries());
+  }, [onChange, buildUpdatedGlossaries]);
+
+  const handleContentChange = useCallback((content: string) => {
     setLocalContent(content);
     if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-    flushTimerRef.current = setTimeout(() => flushContent(content), 300);
-  };
+    flushTimerRef.current = setTimeout(() => {
+      const updated = glossaries.map((g, i) =>
+        i === safeIndex ? { ...g, content } : g
+      );
+      onChange(updated);
+    }, 300);
+  }, [glossaries, safeIndex, onChange]);
 
   // 失焦时立即同步
-  const handleContentBlur = () => {
+  const handleContentBlur = useCallback(() => {
     if (flushTimerRef.current) {
       clearTimeout(flushTimerRef.current);
       flushTimerRef.current = null;
     }
-    flushContent(localContent);
-  };
+    flushContent();
+  }, [flushContent]);
 
   // 切换前先同步当前内容
-  const switchIndex = (newIndex: number) => {
+  const switchIndex = useCallback((newIndex: number) => {
     if (flushTimerRef.current) {
       clearTimeout(flushTimerRef.current);
       flushTimerRef.current = null;
     }
-    flushContent(localContent);
+    flushContent();
     setActiveIndex(newIndex);
-  };
+  }, [flushContent]);
 
-  const handleAdd = () => {
-    // 先同步当前内容
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    if (glossaries.length > 0) {
-      flushContent(localContent);
-    }
-
+  // 可用的下一个未命名编号
+  const nextUntitledTitle = useMemo(() => {
     let index = 1;
     const existingTitles = new Set(glossaries.map(g => g.title));
     while (existingTitles.has(t('glossary.untitled', { index: String(index) }))) {
       index++;
     }
+    return t('glossary.untitled', { index: String(index) });
+  }, [glossaries, t]);
+
+  const handleAdd = useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+
     const newEntry: GlossaryEntry = {
-      title: t('glossary.untitled', { index: String(index) }),
+      title: nextUntitledTitle,
       content: '',
     };
-    const updated = [...glossariesRef.current.map((g, i) =>
-      i === safeIndex ? { ...g, content: localContent } : g
-    ), newEntry];
+    // 合并当前编辑中的内容再新增
+    const updated = [...buildUpdatedGlossaries(), newEntry];
     setActiveIndex(updated.length - 1);
     setLocalContent('');
     onChange(updated);
-  };
+  }, [nextUntitledTitle, buildUpdatedGlossaries, onChange]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     const entry = glossaries[safeIndex];
     const confirmed = await ask(t('glossary.deleteConfirm', { title: entry.title }), {
       kind: 'warning',
@@ -113,14 +126,14 @@ export default function GlossaryPanel({ glossaries, onChange }: GlossaryPanelPro
     if (!confirmed) return;
     const updated = glossaries.filter((_, i) => i !== safeIndex);
     onChange(updated);
-  };
+  }, [glossaries, safeIndex, t, onChange]);
 
-  const startRename = () => {
+  const startRename = useCallback(() => {
     setRenameValue(glossaries[safeIndex].title);
     setIsRenaming(true);
-  };
+  }, [glossaries, safeIndex]);
 
-  const commitRename = () => {
+  const commitRename = useCallback(() => {
     const trimmed = renameValue.trim();
     if (trimmed && trimmed !== glossaries[safeIndex].title) {
       const updated = glossaries.map((g, i) =>
@@ -129,7 +142,7 @@ export default function GlossaryPanel({ glossaries, onChange }: GlossaryPanelPro
       onChange(updated);
     }
     setIsRenaming(false);
-  };
+  }, [renameValue, glossaries, safeIndex, onChange]);
 
   // 空状态
   if (glossaries.length === 0) {
