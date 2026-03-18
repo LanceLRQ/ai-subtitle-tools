@@ -135,10 +135,10 @@ export default function Home() {
           entries={pipeline.entries}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          glossary={config.translation.glossary}
-          onGlossaryChange={(v) => updateConfig({
+          glossaries={config.translation.glossaries}
+          onGlossariesChange={(glossaries) => updateConfig({
             ...config,
-            translation: { ...config.translation, glossary: v },
+            translation: { ...config.translation, glossaries },
           })}
         />
       </div>

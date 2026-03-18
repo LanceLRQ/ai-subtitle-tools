@@ -189,7 +189,7 @@ export default function SettingsPanel({
         <select
           value={config.language}
           onChange={(e) => onConfigChange({ ...config, language: e.target.value as Locale })}
-          className="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200"
+          className="px-3 h-9 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200"
         >
           <option value="zh">中文</option>
           <option value="en">English</option>

@@ -103,6 +103,13 @@ const en: TranslationDict = {
   'glossary.title': 'Glossary',
   'glossary.placeholder': 'One entry per line:\nsource -> translation\n\ne.g.\nフリーレン -> Frieren',
   'glossary.hint': 'Terms will be included in LLM prompts during translation',
+  'glossary.add': 'Add',
+  'glossary.defaultTitle': 'Default',
+  'glossary.untitled': 'Untitled {index}',
+  'glossary.empty': 'Click "Add" to create a glossary group',
+  'glossary.deleteConfirm': 'Delete "{title}"?',
+  'glossary.rename': 'Rename',
+  'glossary.delete': 'Delete',
 
   // Log tabs
   'logTabs.glossary': 'Glossary',

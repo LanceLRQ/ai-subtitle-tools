@@ -103,6 +103,13 @@ const zh: TranslationDict = {
   'glossary.title': '专有名词',
   'glossary.placeholder': '每行一个词条，格式：\n原文 -> 译文\n\n例如：\nフリーレン -> 芙莉莲',
   'glossary.hint': '翻译时将提醒 LLM 使用指定译名',
+  'glossary.add': '新增',
+  'glossary.defaultTitle': '默认',
+  'glossary.untitled': '未命名{index}',
+  'glossary.empty': '点击「新增」添加专有名词组',
+  'glossary.deleteConfirm': '确定删除「{title}」？',
+  'glossary.rename': '重命名',
+  'glossary.delete': '删除',
 
   // Log tabs
   'logTabs.glossary': '专有名词',

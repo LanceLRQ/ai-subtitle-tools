@@ -103,6 +103,13 @@ export interface TranslationDict {
   'glossary.title': string;
   'glossary.placeholder': string;
   'glossary.hint': string;
+  'glossary.add': string;
+  'glossary.defaultTitle': string;
+  'glossary.untitled': string;
+  'glossary.empty': string;
+  'glossary.deleteConfirm': string;
+  'glossary.rename': string;
+  'glossary.delete': string;
 
   // Log tabs
   'logTabs.glossary': string;
