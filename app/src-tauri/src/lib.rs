@@ -3,6 +3,7 @@ mod config;
 mod ffmpeg;
 mod file_ops;
 mod funasr;
+mod qwen3_asr;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,6 +38,9 @@ pub fn run() {
             asr_cache::clear_asr_cache,
             asr_cache::list_asr_cache,
             asr_cache::delete_asr_cache_entry,
+            qwen3_asr::qwen3_submit_asr,
+            qwen3_asr::qwen3_poll_asr,
+            qwen3_asr::qwen3_health_check,
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {

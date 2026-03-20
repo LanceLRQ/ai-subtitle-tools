@@ -50,6 +50,9 @@ export interface TranslationDict {
   'pipeline.usingCache': string;
   'pipeline.cacheSaved': string;
   'pipeline.cancelled': string;
+  'pipeline.asrSubmitted': string;
+  'pipeline.asrPolling': string;
+  'pipeline.asrTaskFailed': string;
 
   // Settings panel
   'settings.language.label': string;
@@ -59,6 +62,15 @@ export interface TranslationDict {
   'settings.ffmpeg.sourceConfig': string;
   'settings.ffmpeg.sourceLocal': string;
   'settings.ffmpeg.sourceSystem': string;
+  'settings.asr.legend': string;
+  'settings.asr.provider': string;
+  'settings.asr.healthCheck': string;
+  'settings.asr.healthChecking': string;
+  'settings.asr.healthDevice': string;
+  'settings.asr.healthModel': string;
+  'settings.asr.healthAlign': string;
+  'settings.asr.healthPunc': string;
+  'settings.asr.healthBackend': string;
   'settings.funasr.legend': string;
   'settings.funasr.apiKeyPlaceholder': string;
   'settings.funasr.modelPlaceholder': string;

@@ -7,6 +7,7 @@ import { loadConfig, saveConfig, getDefaultConfig } from '@/lib/config';
 import { detectFFmpeg } from '@/lib/ffmpegDetector';
 import { extractAudio, getTempAudioPath, cleanupTempFiles } from '@/lib/ffmpeg';
 import { recognizeSpeech, parseAsrResponse } from '@/lib/funasr';
+import { submitQwen3Asr, qwen3PollLoop, convertQwen3ToFunAsrFormat } from '@/lib/qwen3Asr';
 import { checkAsrCache, readAsrCache, writeAsrCache } from '@/lib/asrCache';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { splitSegments } from '@/lib/subtitleSplitter';
@@ -159,32 +160,61 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
         log?.addLog('info', t('pipeline.audioExtracted'));
         if (cancelledRef.current) return;
 
-        // 阶段 3: 语音识别（双曲线假进度）
+        // 阶段 3: 语音识别
         updatePipeline({ stage: 'recognizing', progress: 5, message: t('pipeline.recognizing') });
         log?.addLog('info', t('pipeline.recognizing'));
-        const asrStartTime = Date.now();
-        const K = 30;
-        asrTimerRef.current = setInterval(() => {
-          const t = (Date.now() - asrStartTime) / 1000;
-          const fakeProgress = Math.round(5 + 50 * t / (t + K));
-          updatePipeline({ progress: fakeProgress });
-        }, 1000);
-        const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
-        if (asrTimerRef.current) {
-          clearInterval(asrTimerRef.current);
-          asrTimerRef.current = null;
+
+        let asrJsonStr: string;
+
+        if (config.funasr.provider === 'lancelrq/qwen3-asr-service') {
+          // Qwen3-ASR-Service：异步提交 + 轮询进度
+          const taskId = await submitQwen3Asr(tempAudioPath, config.funasr);
+          log?.addLog('info', t('pipeline.asrSubmitted', { taskId }));
+          if (cancelledRef.current) return;
+
+          const pollResult = await qwen3PollLoop(
+            taskId,
+            config.funasr.url,
+            config.funasr.apiKey,
+            (progress) => {
+              const percent = Math.round(5 + 50 * progress);
+              updatePipeline({
+                progress: percent,
+                message: tRef.current('pipeline.asrPolling', { progress: Math.round(progress * 100) }),
+              });
+            },
+            cancelledRef
+          );
+
+          asrJsonStr = convertQwen3ToFunAsrFormat(pollResult);
+        } else {
+          // FunASR：同步请求 + 假进度
+          const asrStartTime = Date.now();
+          const K = 30;
+          asrTimerRef.current = setInterval(() => {
+            const t = (Date.now() - asrStartTime) / 1000;
+            const fakeProgress = Math.round(5 + 50 * t / (t + K));
+            updatePipeline({ progress: fakeProgress });
+          }, 1000);
+          const asrResult = await recognizeSpeech(tempAudioPath, config.funasr);
+          if (asrTimerRef.current) {
+            clearInterval(asrTimerRef.current);
+            asrTimerRef.current = null;
+          }
+          asrJsonStr = JSON.stringify(asrResult.rawResponse);
         }
-        entries = splitSegments(asrResult.segments, config.subtitle.maxCharsPerLine);
+
+        const asrParsed = parseAsrResponse(asrJsonStr);
+        entries = splitSegments(asrParsed.segments, config.subtitle.maxCharsPerLine);
         updatePipeline({ entries, progress: 55 });
         log?.addLog('info', t('pipeline.recognitionDone', { count: entries.length }));
 
         // 调试模式：保存 ASR 原始 JSON
         if (config.debug.enabled) {
-          writeAsrDebugLog(videoPath, asrResult.rawResponse).catch(console.error);
+          writeAsrDebugLog(videoPath, JSON.parse(asrJsonStr)).catch(console.error);
         }
 
         // 缓存 ASR 结果（用原始 JSON 字符串）
-        const asrJsonStr = JSON.stringify(asrResult.rawResponse);
         writeAsrCache(videoPath, asrJsonStr).then(() => {
           log?.addLog('info', t('pipeline.cacheSaved'));
         }).catch(console.error);
@@ -353,6 +383,12 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
     }
   }, [pipeline.entries, config.translation.bilingual, config.translation.enabled, updatePipeline]);
 
+  // 选择视频文件时重置流水线状态
+  const selectVideo = useCallback((path: string) => {
+    setVideoPath(path);
+    updatePipeline({ stage: 'idle', progress: 0, message: '', entries: [], error: undefined });
+  }, [updatePipeline]);
+
   const stageKey = STAGE_KEY_MAP[pipeline.stage];
   const stageLabel = t(`stage.${stageKey}` as keyof import('@/i18n/types').TranslationDict);
 
@@ -362,7 +398,7 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
     pipeline,
     ffmpegInfo,
     videoPath,
-    setVideoPath,
+    setVideoPath: selectVideo,
     stageLabel,
     isProcessing: !['idle', 'done', 'error'].includes(pipeline.stage),
     startProcessing,
