@@ -4,6 +4,9 @@ export interface GlossaryEntry {
   content: string;
 }
 
+/** ASR 服务提供方 */
+export type AsrProvider = 'funasr' | 'lancelrq/qwen3-asr-service';
+
 /** 应用配置 */
 export interface AppConfig {
   language: 'zh' | 'en';
@@ -11,6 +14,7 @@ export interface AppConfig {
     path: string;
   };
   funasr: {
+    provider: AsrProvider;
     url: string;
     apiKey: string;
     model: string;
@@ -109,4 +113,52 @@ export interface FFmpegDetectResult {
   path: string;
   version: string;
   source: 'config' | 'local' | 'system';
+}
+
+/** Qwen3 ASR 提交响应 */
+export interface Qwen3SubmitResponse {
+  task_id: string;
+}
+
+/** Qwen3 ASR 逐字时间戳 */
+export interface Qwen3Word {
+  text: string;
+  start: number;
+  end: number;
+}
+
+/** Qwen3 ASR 分段 */
+export interface Qwen3Segment {
+  text: string;
+  start: number;
+  end: number;
+  words: Qwen3Word[];
+}
+
+/** Qwen3 ASR 识别结果 */
+export interface Qwen3AsrResult {
+  text: string;
+  segments: Qwen3Segment[];
+  duration: number;
+}
+
+/** Qwen3 ASR 轮询响应 */
+export interface Qwen3PollResponse {
+  task_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  result?: Qwen3AsrResult;
+  error?: string;
+}
+
+/** Qwen3 ASR 健康检查响应 */
+export interface Qwen3HealthResponse {
+  status: string;
+  device: string;
+  model_size: string;
+  align_enabled: boolean;
+  punc_enabled: boolean;
+  asr_backend: string;
+  vad_backend: string;
+  punc_backend: string;
 }

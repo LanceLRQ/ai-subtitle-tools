@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { ask } from '@tauri-apps/plugin-dialog';
-import type { AppConfig, FFmpegDetectResult } from '@/lib/types';
+import type { AppConfig, FFmpegDetectResult, AsrProvider, Qwen3HealthResponse } from '@/lib/types';
 import { testLLMConnection } from '@/lib/translator';
+import { checkQwen3Health } from '@/lib/qwen3Asr';
 import { useI18n } from '@/i18n';
 import type { Locale } from '@/i18n';
 import AsrCacheModal from './AsrCacheModal';
@@ -25,11 +26,21 @@ interface SettingsPanelProps {
   onDetectFFmpeg: () => void;
 }
 
+const ASR_PROVIDERS: { value: AsrProvider; label: string }[] = [
+  { value: 'funasr', label: 'Quantatirsk/funasr-api' },
+  { value: 'lancelrq/qwen3-asr-service', label: 'Qwen3-ASR-Service' },
+];
+
 const ASR_MODELS = [
   { value: 'qwen3-asr-1.7b', label: 'Qwen3-ASR 1.7B' },
   { value: 'qwen3-asr-0.6b', label: 'Qwen3-ASR 0.6B' },
   { value: 'paraformer-large', label: 'Paraformer Large' },
 ];
+
+const DEFAULT_URLS: Record<AsrProvider, string> = {
+  'funasr': 'http://127.0.0.1:17000',
+  'lancelrq/qwen3-asr-service': 'http://127.0.0.1:8765/v1',
+};
 
 const TARGET_LANGUAGES = [
   { value: '中文', annotation: 'Chinese' },
@@ -153,6 +164,13 @@ export default function SettingsPanel({
     hadThinkingTags?: boolean;
   }>({ status: 'idle', message: '' });
 
+  // Qwen3 健康检查状态
+  const [healthState, setHealthState] = useState<{
+    status: 'idle' | 'checking' | 'success' | 'error';
+    data?: Qwen3HealthResponse;
+    error?: string;
+  }>({ status: 'idle' });
+
   // 存储管理状态
   const [storageInfo, setStorageInfo] = useState<{
     cacheSize: number;
@@ -224,6 +242,30 @@ export default function SettingsPanel({
       console.error('Failed to open config dir:', err);
     }
   }, [storageInfo?.configDir]);
+
+  const handleHealthCheck = useCallback(async () => {
+    setHealthState({ status: 'checking' });
+    try {
+      const data = await checkQwen3Health(config.funasr.url, config.funasr.apiKey);
+      setHealthState({ status: 'success', data });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setHealthState({ status: 'error', error: msg });
+    }
+  }, [config.funasr.url, config.funasr.apiKey]);
+
+  const handleProviderChange = useCallback((provider: AsrProvider) => {
+    const currentUrl = config.funasr.url;
+    const newDefault = DEFAULT_URLS[provider];
+    // 当前 URL 为空或是任意 provider 的预设值时，自动切换到新 provider 的预设值
+    const isDefaultUrl = Object.values(DEFAULT_URLS).includes(currentUrl);
+    const newUrl = (!currentUrl || isDefaultUrl) ? newDefault : currentUrl;
+    onConfigChange({
+      ...config,
+      funasr: { ...config.funasr, provider, url: newUrl },
+    });
+    setHealthState({ status: 'idle' });
+  }, [config, onConfigChange]);
 
   const handleTestLLM = useCallback(async () => {
     setLlmTestState({ status: 'testing', message: t('settings.llm.testing') });
@@ -305,9 +347,23 @@ export default function SettingsPanel({
         )}
       </fieldset>
 
-      {/* FunASR */}
+      {/* ASR 语音识别 */}
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.funasr.legend')}</legend>
+        <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.asr.legend')}</legend>
+        {/* Provider 选择 */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-500 dark:text-gray-400 shrink-0">{t('settings.asr.provider')}</label>
+          <select
+            value={config.funasr.provider || 'funasr'}
+            onChange={(e) => handleProviderChange(e.target.value as AsrProvider)}
+            className="flex-1 px-3 h-8 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200"
+          >
+            {ASR_PROVIDERS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
+        {/* URL */}
         <input
           type="text"
           value={config.funasr.url}
@@ -315,6 +371,7 @@ export default function SettingsPanel({
           placeholder="API URL"
           className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
         />
+        {/* API Key + Model (FunASR only) */}
         <div className="flex gap-2">
           <input
             type="password"
@@ -323,14 +380,40 @@ export default function SettingsPanel({
             placeholder={t('settings.funasr.apiKeyPlaceholder')}
             className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
-          <ComboBox
-            value={config.funasr.model}
-            onChange={(v) => update('funasr', 'model', v)}
-            options={ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
-            placeholder={t('settings.funasr.modelPlaceholder')}
-            className="w-52"
-          />
+          {(config.funasr.provider || 'funasr') === 'funasr' && (
+            <ComboBox
+              value={config.funasr.model}
+              onChange={(v) => update('funasr', 'model', v)}
+              options={ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
+              placeholder={t('settings.funasr.modelPlaceholder')}
+              className="w-52"
+            />
+          )}
         </div>
+        {/* Qwen3 健康检查 */}
+        {(config.funasr.provider) === 'lancelrq/qwen3-asr-service' && (
+          <div className="space-y-1">
+            <button
+              onClick={handleHealthCheck}
+              disabled={healthState.status === 'checking'}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+            >
+              {healthState.status === 'checking' ? t('settings.asr.healthChecking') : t('settings.asr.healthCheck')}
+            </button>
+            {healthState.status === 'success' && healthState.data && (
+              <div className="text-xs text-green-500 dark:text-green-400 space-y-0.5 pl-1">
+                <p>{t('settings.asr.healthDevice', { device: healthState.data.device })}</p>
+                <p>{t('settings.asr.healthModel', { model: healthState.data.model_size })}</p>
+                <p>{t('settings.asr.healthBackend', { backend: healthState.data.asr_backend })}</p>
+                <p>{t('settings.asr.healthAlign', { status: healthState.data.align_enabled ? 'ON' : 'OFF' })}</p>
+                <p>{t('settings.asr.healthPunc', { status: healthState.data.punc_enabled ? 'ON' : 'OFF' })}</p>
+              </div>
+            )}
+            {healthState.status === 'error' && (
+              <p className="text-xs text-red-400 pl-1">{healthState.error}</p>
+            )}
+          </div>
+        )}
       </fieldset>
 
       {/* LLM */}

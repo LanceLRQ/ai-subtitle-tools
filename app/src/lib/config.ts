@@ -9,6 +9,7 @@ export function getDefaultConfig(): AppConfig {
       path: '',
     },
     funasr: {
+      provider: 'funasr',
       url: 'http://127.0.0.1:17000',
       apiKey: '',
       model: 'qwen3-asr-1.7b',
