@@ -363,54 +363,54 @@ export default function SettingsPanel({
             ))}
           </select>
         </div>
-        {/* URL */}
-        <input
-          type="text"
-          value={config.funasr.url}
-          onChange={(e) => update('funasr', 'url', e.target.value)}
-          placeholder="API URL"
-          className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
-        />
-        {/* API Key + Model (FunASR only) */}
+        {/* URL + API Key */}
         <div className="flex gap-2">
+          <input
+            type="text"
+            value={config.funasr.url}
+            onChange={(e) => update('funasr', 'url', e.target.value)}
+            placeholder="API URL"
+            className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+          />
           <input
             type="password"
             value={config.funasr.apiKey}
             onChange={(e) => update('funasr', 'apiKey', e.target.value)}
             placeholder={t('settings.funasr.apiKeyPlaceholder')}
-            className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+            className="w-40 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
-          {(config.funasr.provider || 'funasr') === 'funasr' && (
-            <ComboBox
-              value={config.funasr.model}
-              onChange={(v) => update('funasr', 'model', v)}
-              options={ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
-              placeholder={t('settings.funasr.modelPlaceholder')}
-              className="w-52"
-            />
-          )}
         </div>
+        {/* Model (FunASR only) */}
+        {(config.funasr.provider || 'funasr') === 'funasr' && (
+          <ComboBox
+            value={config.funasr.model}
+            onChange={(v) => update('funasr', 'model', v)}
+            options={ASR_MODELS.map((m) => ({ value: m.value, label: m.label }))}
+            placeholder={t('settings.funasr.modelPlaceholder')}
+            className="w-full"
+          />
+        )}
         {/* Qwen3 健康检查 */}
         {(config.funasr.provider) === 'lancelrq/qwen3-asr-service' && (
-          <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <button
               onClick={handleHealthCheck}
               disabled={healthState.status === 'checking'}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline underline-offset-2 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:no-underline disabled:cursor-not-allowed transition-colors shrink-0"
             >
               {healthState.status === 'checking' ? t('settings.asr.healthChecking') : t('settings.asr.healthCheck')}
             </button>
             {healthState.status === 'success' && healthState.data && (
-              <div className="text-xs text-green-500 dark:text-green-400 space-y-0.5 pl-1">
-                <p>{t('settings.asr.healthDevice', { device: healthState.data.device })}</p>
-                <p>{t('settings.asr.healthModel', { model: healthState.data.model_size })}</p>
-                <p>{t('settings.asr.healthBackend', { backend: healthState.data.asr_backend })}</p>
-                <p>{t('settings.asr.healthAlign', { status: healthState.data.align_enabled ? 'ON' : 'OFF' })}</p>
-                <p>{t('settings.asr.healthPunc', { status: healthState.data.punc_enabled ? 'ON' : 'OFF' })}</p>
-              </div>
+              <>
+                <span className="text-xs text-green-500 dark:text-green-400">{t('settings.asr.healthDevice', { device: healthState.data.device })}</span>
+                <span className="text-xs text-green-500 dark:text-green-400">{t('settings.asr.healthModel', { model: healthState.data.model_size })}</span>
+                <span className="text-xs text-green-500 dark:text-green-400">{t('settings.asr.healthBackend', { backend: healthState.data.asr_backend })}</span>
+                <span className="text-xs text-green-500 dark:text-green-400">{t('settings.asr.healthAlign', { status: healthState.data.align_enabled ? 'ON' : 'OFF' })}</span>
+                <span className="text-xs text-green-500 dark:text-green-400">{t('settings.asr.healthPunc', { status: healthState.data.punc_enabled ? 'ON' : 'OFF' })}</span>
+              </>
             )}
             {healthState.status === 'error' && (
-              <p className="text-xs text-red-400 pl-1">{healthState.error}</p>
+              <span className="text-xs text-red-400">{healthState.error}</span>
             )}
           </div>
         )}

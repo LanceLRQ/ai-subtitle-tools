@@ -62,6 +62,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sync version from tag
+        run: |
+          TAG="${{ needs.create-release.outputs.tag_name }}"
+          VERSION="${TAG#v}"
+          bash scripts/bump-version.sh "$VERSION"
+
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |

@@ -4,17 +4,19 @@
 
 A cross-platform desktop tool for automated video subtitle generation and translation. Extracts audio via FFmpeg, performs speech recognition through FunASR API, translates with LLM, and exports bilingual SRT subtitle files.
 
-![Preview](docs/ScreenShot_en.png)
+![Preview](docs/ScreenShot_en.jpg)
 
 ## Features
 
-- **Speech Recognition** — FunASR API integration, supporting Qwen3-ASR, Paraformer and more
+- **Speech Recognition** — FunASR API integration, supporting Qwen3-ASR, Paraformer and more; also supports [Qwen3-ASR-Service](https://github.com/LanceLRQ/Qwen3-ASR-Service) async recognition (submit + poll with real-time progress)
+- **ASR Caching** — redb-based recognition result caching, skip repeated recognition for the same video; supports cache list browsing and per-entry deletion
 - **Smart Segmentation** — Splits long text by punctuation, greedily merges into proper-length subtitle lines with word-level timestamp alignment
 - **Subtitle Translation** — Compatible with OpenAI-format LLM APIs, batch translation, supports reasoning models (auto-filters `<think>` tags)
-- **Glossary** — Define `source -> translation` term mappings injected into LLM prompts, ensuring consistent translation of character names, place names, etc.
+- **Multi-Group Glossary** — Create multiple `source -> translation` term groups (e.g. "Characters", "Places"), auto-merged and injected into LLM prompts for consistent translation
 - **Bilingual Subtitles** — Export original + translated bilingual SRT
 - **Multi-language** — Target languages include Chinese, English, Japanese, Korean, Spanish, Portuguese, or custom input
 - **Bilingual UI** — Chinese / English interface switching
+- **Storage Management** — One-click cleanup for ASR cache and temp audio files, view config directory usage
 - **Cross-platform** — Built on Tauri, supports Windows, macOS, Linux
 - **Debug Mode** — Save raw ASR JSON and LLM request logs for troubleshooting
 
@@ -102,12 +104,14 @@ App configuration is automatically saved to the system config directory:
 |----------|--------|---------|-------------|
 | FFmpeg | Path | (auto-detect) | If empty, detects in order: user config → local directory → system PATH |
 | FunASR | API URL | `http://127.0.0.1:17000` | FunASR service address |
-| FunASR | Model | `qwen3-asr-1.7b` | Also available: qwen3-asr-0.6b, paraformer-large |
+| FunASR | Model | `qwen3-asr-1.7b` | Also available: qwen3-asr-0.6b, paraformer-large (FunASR provider only) |
+| ASR | Provider | `Quantatirsk/funasr-api` | Switchable to `Qwen3-ASR-Service` (async poll mode) |
+| Qwen3-ASR | API URL | `http://127.0.0.1:8765/v1` | Qwen3-ASR-Service endpoint (shown when selected) |
 | LLM | Base URL | `https://api.openai.com/v1` | OpenAI-compatible API endpoint |
 | LLM | Model | `gpt-4o-mini` | Any compatible model |
 | Translation | Batch Size | 100 | Subtitles per API request (1-200) |
 | Translation | Target Language | Chinese | Supports custom input |
-| Translation | Glossary | (empty) | One `source -> translation` per line, injected into LLM prompts |
+| Translation | Glossary | (empty) | Multi-group support, one `source -> translation` per line, merged and injected into LLM prompts |
 | Subtitle | Max Chars Per Line | 30 | Maximum characters per subtitle line after punctuation splitting |
 
 ## Project Structure
@@ -118,17 +122,29 @@ ai-subtitle-tools/
 │   ├── src/
 │   │   ├── app/                # Next.js pages
 │   │   ├── components/         # UI components
+│   │   │   ├── AsrCacheModal   #   ASR cache list modal
 │   │   │   ├── FilePicker      #   File selection
-│   │   │   ├── GlossaryPanel   #   Glossary term mapping
-│   │   │   ├── SettingsPanel   #   Settings panel
+│   │   │   ├── GlossaryPanel   #   Multi-group glossary editor
+│   │   │   ├── LogPanel        #   Log panel
+│   │   │   ├── LogTabs         #   Log/Glossary/Preview tabs
+│   │   │   ├── SettingsModal   #   Settings modal
+│   │   │   ├── SettingsPanel   #   Settings panel (with storage management)
 │   │   │   ├── ProgressBar     #   Progress indicator
-│   │   │   └── SubtitlePreview #   Subtitle preview table
+│   │   │   ├── SubtitlePreview #   Subtitle preview table
+│   │   │   └── ThemeToggle     #   Theme switcher
 │   │   ├── hooks/
-│   │   │   └── usePipeline     # Pipeline orchestration
+│   │   │   ├── usePipeline     #   Pipeline orchestration (with cache + provider switching)
+│   │   │   ├── useLog          #   Log management
+│   │   │   └── useTheme        #   Theme management
+│   │   ├── i18n/               # Internationalization
+│   │   │   ├── zh.ts           #   Chinese
+│   │   │   └── en.ts           #   English
 │   │   └── lib/
+│   │       ├── asrCache        #   ASR cache API
 │   │       ├── ffmpeg          #   FFmpeg execution
 │   │       ├── ffmpegDetector  #   3-tier FFmpeg detection
 │   │       ├── funasr          #   FunASR API client
+│   │       ├── qwen3Asr        #   Qwen3-ASR-Service client
 │   │       ├── translator      #   LLM translation (retry + batching)
 │   │       ├── subtitle        #   SRT parsing/generation
 │   │       ├── subtitleSplitter#   Punctuation splitting + greedy merging
@@ -140,10 +156,15 @@ ai-subtitle-tools/
 │           ├── lib.rs          #   Entry point + command registration
 │           ├── config.rs       #   Config read/write
 │           ├── ffmpeg.rs       #   FFmpeg execution + progress events
-│           └── file_ops.rs     #   File operations (with security checks)
+│           ├── file_ops.rs     #   File operations (with storage management)
+│           ├── funasr.rs       #   FunASR audio upload (streaming)
+│           ├── asr_cache.rs    #   ASR cache (redb)
+│           └── qwen3_asr.rs    #   Qwen3-ASR-Service client
 ├── services/                   # Docker service configuration
 │   ├── docker-compose.yml
 │   └── manage.sh
+├── scripts/                    # Utility scripts
+│   └── bump-version.sh        #   Version sync
 └── LICENSE                     # MIT
 ```
 
