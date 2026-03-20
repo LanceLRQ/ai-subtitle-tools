@@ -8,13 +8,15 @@
 
 ## 功能特性
 
-- **语音识别** — 接入 FunASR API，支持 Qwen3-ASR、Paraformer 等模型
+- **语音识别** — 接入 FunASR API，支持 Qwen3-ASR、Paraformer 等模型；同时支持 [Qwen3-ASR-Service](https://github.com/LanceLRQ/Qwen3-ASR-Service) 异步识别服务（提交+轮询模式，支持实时进度显示）
+- **ASR 缓存** — 基于 redb 的识别结果缓存，相同视频无需重复识别；支持缓存列表查看、单条删除
 - **智能断句** — 按标点拆分长文本，贪心合并为合理长度的字幕行，基于逐字时间戳精确分配时间
 - **字幕翻译** — 兼容 OpenAI 格式的 LLM API，批量翻译，支持深度思考模型（自动过滤 `<think>` 标签）
-- **专有名词对照表** — 可定义 `原文 -> 译文` 对照表，翻译时自动注入 LLM 提示词，确保角色名、地名等专有名词翻译一致
+- **多组专有名词表** — 支持创建多组 `原文 -> 译文` 对照表（如"角色名"、"地名"等分组管理），翻译时自动合并注入 LLM 提示词
 - **双语字幕** — 支持导出原文 + 译文双语 SRT
 - **多语言** — 目标语言可选中文、英语、日语、韩语、西班牙语、葡萄牙语，也可自定义输入
 - **中英界面** — 支持中文 / English 界面切换
+- **存储管理** — 一键清理 ASR 缓存、临时音频文件，查看配置目录占用
 - **跨平台** — 基于 Tauri，支持 Windows、macOS、Linux
 - **调试模式** — 可保存 ASR 原始 JSON 和 LLM 请求日志，便于排查问题
 
@@ -102,12 +104,14 @@ cd services
 |------|--------|--------|------|
 | FFmpeg | 路径 | (自动检测) | 留空则按 用户配置 → 本地目录 → 系统 PATH 顺序检测 |
 | FunASR | API URL | `http://127.0.0.1:17000` | FunASR 服务地址 |
-| FunASR | 模型 | `qwen3-asr-1.7b` | 可选 qwen3-asr-0.6b、paraformer-large |
+| FunASR | 模型 | `qwen3-asr-1.7b` | 可选 qwen3-asr-0.6b、paraformer-large（仅 FunASR 提供者） |
+| ASR | 提供者 | `Quantatirsk/funasr-api` | 可切换为 `Qwen3-ASR-Service`（异步轮询模式） |
+| Qwen3-ASR | API URL | `http://127.0.0.1:8765/v1` | Qwen3-ASR-Service 地址（选择该提供者时显示） |
 | LLM | Base URL | `https://api.openai.com/v1` | OpenAI 兼容 API 地址 |
 | LLM | 模型 | `gpt-4o-mini` | 任意兼容模型 |
 | 翻译 | 每批数量 | 100 | 每次 API 请求翻译的字幕条数 (1-200) |
 | 翻译 | 目标语言 | 中文 | 支持自定义输入 |
-| 翻译 | 专有名词对照表 | (空) | 每行一个 `原文 -> 译文`，翻译时注入 LLM 提示词 |
+| 翻译 | 专有名词对照表 | (空) | 支持多组管理，每行一个 `原文 -> 译文`，翻译时合并注入 LLM 提示词 |
 | 字幕 | 每行最大字符数 | 30 | ASR 长文本按标点拆分后的合并上限 |
 
 ## 项目结构
@@ -118,17 +122,29 @@ ai-subtitle-tools/
 │   ├── src/
 │   │   ├── app/                # Next.js 页面
 │   │   ├── components/         # UI 组件
+│   │   │   ├── AsrCacheModal   #   ASR 缓存列表弹窗
 │   │   │   ├── FilePicker      #   文件选择
-│   │   │   ├── GlossaryPanel   #   专有名词对照表
-│   │   │   ├── SettingsPanel   #   设置面板
+│   │   │   ├── GlossaryPanel   #   多组专有名词对照表
+│   │   │   ├── LogPanel        #   日志面板
+│   │   │   ├── LogTabs         #   日志/对照表/预览 标签页
+│   │   │   ├── SettingsModal   #   设置弹窗
+│   │   │   ├── SettingsPanel   #   设置面板 (含存储管理)
 │   │   │   ├── ProgressBar     #   进度条
-│   │   │   └── SubtitlePreview #   字幕预览表格
+│   │   │   ├── SubtitlePreview #   字幕预览表格
+│   │   │   └── ThemeToggle     #   主题切换
 │   │   ├── hooks/
-│   │   │   └── usePipeline     # 流水线调度
+│   │   │   ├── usePipeline     #   流水线调度 (含缓存+提供者切换)
+│   │   │   ├── useLog          #   日志管理
+│   │   │   └── useTheme        #   主题管理
+│   │   ├── i18n/               # 国际化
+│   │   │   ├── zh.ts           #   中文
+│   │   │   └── en.ts           #   English
 │   │   └── lib/
+│   │       ├── asrCache        #   ASR 缓存 API
 │   │       ├── ffmpeg          #   FFmpeg 执行
 │   │       ├── ffmpegDetector  #   FFmpeg 三级检测
 │   │       ├── funasr          #   FunASR API 客户端
+│   │       ├── qwen3Asr        #   Qwen3-ASR-Service 客户端
 │   │       ├── translator      #   LLM 翻译 (重试+批量)
 │   │       ├── subtitle        #   SRT 解析/生成
 │   │       ├── subtitleSplitter#   标点断句+贪心合并
@@ -140,10 +156,15 @@ ai-subtitle-tools/
 │           ├── lib.rs          #   入口 + 命令注册
 │           ├── config.rs       #   配置读写
 │           ├── ffmpeg.rs       #   FFmpeg 执行 + 进度事件
-│           └── file_ops.rs     #   文件操作 (含安全校验)
+│           ├── file_ops.rs     #   文件操作 (含存储管理)
+│           ├── funasr.rs       #   FunASR 音频上传 (流式)
+│           ├── asr_cache.rs    #   ASR 缓存 (redb)
+│           └── qwen3_asr.rs    #   Qwen3-ASR-Service 客户端
 ├── services/                   # Docker 服务配置
 │   ├── docker-compose.yml
 │   └── manage.sh
+├── scripts/                    # 工具脚本
+│   └── bump-version.sh        #   版本号同步
 └── LICENSE                     # MIT
 ```
 
