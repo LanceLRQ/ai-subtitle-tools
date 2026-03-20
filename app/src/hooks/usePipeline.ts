@@ -177,11 +177,11 @@ export function usePipeline(logCallbacks?: PipelineLogCallbacks) {
             config.funasr.url,
             config.funasr.apiKey,
             (progress) => {
+              const progressPct = Math.round(progress * 100);
               const percent = Math.round(5 + 50 * progress);
-              updatePipeline({
-                progress: percent,
-                message: tRef.current('pipeline.asrPolling', { progress: Math.round(progress * 100) }),
-              });
+              const msg = tRef.current('pipeline.asrPolling', { progress: progressPct });
+              updatePipeline({ progress: percent, message: msg });
+              log?.addLog('info', msg);
             },
             cancelledRef
           );
